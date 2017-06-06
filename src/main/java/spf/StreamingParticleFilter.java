@@ -11,13 +11,21 @@ import simplesmc.AbstractSMCAlgorithm;
 import simplesmc.SMCProblemSpecification;
 import spf.StreamingPropagator.PropagationResult;
 
+/**
+ * Re-implementation of StreamingBootstrapFilter
+ * 
+ * @author Alexandre Bouchard (alexandre.bouchard@gmail.com)
+ * @author Seong-Hwan Jun (s2jun.uw@gmail.com)
+ *
+ * @param <P>
+ */
 public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
 {
   public final SMCProblemSpecification<P> problemSpec;
   private final SPFOptions options;
   private final Random mainRandom = new Random(1);
   private double logZ = 0.0;
-  private List<Integer> nImplicitParticles;
+  private List<Double> nImplicitParticles;
 
   public StreamingParticleFilter(SMCProblemSpecification<P> problemSpec, SPFOptions options)
   {
@@ -28,30 +36,40 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
   public ParticlePopulation<P> sample()
   {
     int nSMCIterations = problemSpec.nIterations();
+
+    // instantiate new arraylist each time
     nImplicitParticles = new ArrayList<>(nSMCIterations);
+    timeInSeconds = new ArrayList<>(nSMCIterations); 
+    long start = 0, end = 0;
 
     // initial distribution
+    start = System.currentTimeMillis();
     StreamingBootstrapProposal proposal = getInitialDistributionProposal();
     StreamingPropagator<P> propagator = new StreamingPropagator<P>(proposal, options);
     PropagationResult<P> propResults = propagator.execute(0);
     logZ = propResults.population.logZEstimate();
-    nImplicitParticles.add(propResults.population.getNumberOfParticles());
+    end = System.currentTimeMillis();
+    nImplicitParticles.add((double)propResults.population.getNumberOfParticles());
+    timeInSeconds.add((end - start)/1000.);
 
     // recursion
     for (int i = 1; i < nSMCIterations; i++)
     {
+      start = System.currentTimeMillis();
       proposal = new StreamingBootstrapProposal(mainRandom.nextLong(), propResults.getParticlePopulation());
       propagator = new StreamingPropagator<>(proposal, options);
       propResults = propagator.execute(i);
       logZ += propResults.population.logZEstimate();
-      nImplicitParticles.add(propResults.population.getNumberOfParticles());
+      end = System.currentTimeMillis();
+      nImplicitParticles.add((double)propResults.population.getNumberOfParticles());
+      timeInSeconds.add((end - start)/1000.);
     }
 
     return propResults.getParticlePopulation();
   }
 
   public double logNormEstimate() { return logZ; }
-  public List<Integer> nImplicitParticles() { return nImplicitParticles; }
+  public List<Double> nImplicitParticles() { return nImplicitParticles; }
   
   private StreamingBootstrapProposal getInitialDistributionProposal()
   {

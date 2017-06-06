@@ -8,6 +8,8 @@ import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 
 import briefj.run.Results;
 import simplesmc.AbstractSMCAlgorithm;
+import simplesmc.SMCAlgorithm;
+import spf.StreamingParticleFilter;
 import util.OutputHelper;
 
 /**
@@ -26,6 +28,8 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 	private int nAccepts = 0;
 	private SummaryStatistics marginalLikelihoodStat = new SummaryStatistics();
 	private LogZProcessor<P> logZProcessor;
+	private List<SummaryStatistics> smcStatistics = null;
+	private List<SummaryStatistics> smcTimingStatistics = null;
 
 	public PMMHAlgorithm(
 			P params,
@@ -33,7 +37,7 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 			MCMCProblemSpecification<P> mcmcProblemSpecification,
 			PMCMCOptions options)
 	{
-		this(params, smcAlgorithm, mcmcProblemSpecification, options, null);
+		this(params, smcAlgorithm, mcmcProblemSpecification, options, null, null);
 	}
 
 	public PMMHAlgorithm(
@@ -41,17 +45,15 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 			AbstractSMCAlgorithm<S> smcAlgorithm, 
 			MCMCProblemSpecification<P> mcmcProblemSpecification,
 			PMCMCOptions options,
-			List<PMCMCProcessor<P>> processors)
+			List<PMCMCProcessor<P>> processors,
+			LogZProcessor<P> logZProcessor)
 	{
 		this.smcAlgorithm = smcAlgorithm;
 		this.mcmcProblemSpecification = mcmcProblemSpecification;
 		this.options = options;
 		this.params = params;
 		this.processors = processors;
-		
-		if (options.collectMarginalLikelihoods) {
-			logZProcessor = new LogZProcessor<>();
-		}
+		this.logZProcessor = logZProcessor;
 	}
 
 	public void sample()
@@ -65,18 +67,27 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 		{
 			// propose new values for the parameters
 			P pstar = mcmcProblemSpecification.propose(options.random, params);
-			// update the params with the newly proposed pstar
+			// compute the acceptance ratio
+			double a = mcmcProblemSpecification.logProposalDensity(params, pstar) - mcmcProblemSpecification.logProposalDensity(pstar, params);
+
+			System.out.println(iter + ", " + params + ", " + logZCurr + ", " + logPriorCurr + ", " + a);
+
+			// TODO: instantiate new AbstractSMCAlgorithm for each iteration?
+			// update the params with the newly proposed pstar and run SMC algorithm to get an estimate of the marginal likelihood
 			params.update(pstar);
-			// run SMC algorithm to get an estimate of the marginal likelihood
 			smcAlgorithm.sample();
+			updateSMCStatistics(smcAlgorithm);
+
 			double logZStar = smcAlgorithm.logNormEstimate();
 			double logPriorStar = mcmcProblemSpecification.logPriorDensity(pstar);
 
-			// compute the acceptance ratio
-			double a = logZStar + logPriorStar + mcmcProblemSpecification.logProposalDensity(params, pstar);
-			a -= (logZCurr + logPriorCurr + mcmcProblemSpecification.logProposalDensity(pstar, params));
-			a = Math.exp(a);
+			a += logZStar + logPriorStar;
+			a -= (logZCurr + logPriorCurr);
 			double u = options.random.nextDouble();
+			System.out.println(iter + "*, " + pstar + ", " + logZStar + ", " + logPriorStar + ", " + a);
+
+			a = Math.min(1.0, Math.exp(a));
+			System.out.println("a: " + Math.round(a*100)/100.0 + ", u: " + u);
 			if (u < a) {
 				// accept the proposal
 				logZCurr = logZStar;
@@ -88,36 +99,87 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 			}
 			
 			if (iter >= options.burnIn && iter % options.thinningPeriod == 0) {
-				System.out.println(iter + ", " + params + ", " + logZCurr);
-				System.out.println(iter + ", " + pstar + ", " + logZStar);
 				for (PMCMCProcessor<P> processor : processors)
 					processor.process(pstar); 
 			}
 
 			// collect the marginal likelihood stat for each proposed value of pstar
 			marginalLikelihoodStat.addValue(logZStar);
-			if (options.collectMarginalLikelihoods)
-				logZProcessor.process(pstar, logZStar);
-
+			if (logZProcessor != null)
+				logZProcessor.process(iter, pstar, logZStar);
 		}
 
 		// output the parameters
 		File results = Results.getResultFolder();
 		for (PMCMCProcessor<P> processor : processors)
-			processor.output(new File(results, processor.getClass().getName() + ".csv"));
+			processor.output(new File(results, processor.outputPrefix() + "." + processor.getClass().getName() + ".csv"));
 
 		// output statistics
 		List<String> contents = new ArrayList<>();
-		contents.add(marginalLikelihoodStat.toString());
+		//contents.add(marginalLikelihoodStat.toString());
 		contents.add("nAccepts: " + nAccepts);
 		contents.add("nIter: " + options.nIter);
+		contents.add("burnIn: " + options.burnIn);
 		OutputHelper.writeLines(new File(results, "summary.txt"), contents);
-		
+
 		// output the marginal likelihoods
-		if (options.collectMarginalLikelihoods)
-			logZProcessor.output(new File(results, "logZ.csv"));
+		if (logZProcessor != null)
+			logZProcessor.output(new File(results, logZProcessor.getOutputPrefix() + ".logZ.csv"));
+
+		// output smc statistics for each iteration: timing results,
+		List<String> smcOutputLines = new ArrayList<>();
+		smcOutputLines.add("Iter, Avg, Var, TimeAvg, TimeVar");
+		for (int i = 0; i < smcStatistics.size(); i++)
+		{
+			SummaryStatistics stat = smcStatistics.get(i);
+			SummaryStatistics timingStat = smcTimingStatistics.get(i);
+
+			// form the output line
+			smcOutputLines.add(i + ", " + stat.getMean() + ", " + stat.getVariance() + ", " + timingStat.getMean() + ", " + timingStat.getVariance());
+		}
+		OutputHelper.writeLines(new File(results, "smcStat.csv"), smcOutputLines);
 	}
-	
+
 	public int nAccepts() { return nAccepts; }
 
+	private void updateSMCStatistics(AbstractSMCAlgorithm<S> abstractSMC)
+	{
+		List<Double> stat;
+
+		if (smcAlgorithm instanceof SMCAlgorithm)
+		{
+			SMCAlgorithm<S> smc = (SMCAlgorithm<S>)abstractSMC;
+			stat = smc.effectiveSampleSize();
+		}
+		else if (smcAlgorithm instanceof StreamingParticleFilter)
+		{
+			StreamingParticleFilter<S> spf = (StreamingParticleFilter<S>)abstractSMC;
+			stat = spf.nImplicitParticles();			
+		}
+		else
+			throw new RuntimeException("Only the standard SMC and SPF algorithms are supported.");
+		
+		// process stat
+		List<Double> timingInSeconds = abstractSMC.timeInSeconds();
+		if (stat.size() != timingInSeconds.size())
+			throw new RuntimeException("SMC statistics collection and timing results collection are incompatible! Bug in the program.");
+		
+		if (smcStatistics == null || smcTimingStatistics == null)
+		{
+			// initialize the stat collection storage
+			smcStatistics = new ArrayList<>(stat.size());
+			smcTimingStatistics = new ArrayList<>(stat.size());
+			for (int i = 0; i < stat.size(); i++)
+			{
+				smcStatistics.add(new SummaryStatistics());
+				smcTimingStatistics.add(new SummaryStatistics());
+			}
+		}
+		
+		for (int i = 0; i < stat.size(); i++)
+		{
+			smcStatistics.get(i).addValue(stat.get(i));
+			smcTimingStatistics.get(i).addValue(timingInSeconds.get(i));
+		}
+	}
 }

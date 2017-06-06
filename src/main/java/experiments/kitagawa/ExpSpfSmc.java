@@ -18,7 +18,7 @@ import bayonet.smc.ParticlePopulation;
 import briefj.opt.Option;
 import briefj.run.Mains;
 
-public class ExpSPFvsSMC implements Runnable
+public class ExpSpfSmc implements Runnable
 {
 	@Option(required=false) public static Random random = new Random(1);
 	@Option(required=false) public static double var_v = 10.0;
@@ -56,7 +56,7 @@ public class ExpSPFvsSMC implements Runnable
 
 		proposal = new KitagawaSMCProblemSpecification(params, y);
 		
-		OutputHelper.writeTableAsCSV(generatedDataOutputPath, new String[]{"x", "y"}, x, y);
+		OutputHelper.writeTableAsCSV(new File(generatedDataOutputPath), new String[]{"x", "y"}, x, y);
 
 		// run SMC
 		SMCOptions options = new SMCOptions();
@@ -123,7 +123,7 @@ public class ExpSPFvsSMC implements Runnable
 	
 	public static void main(String [] args)
 	{
-		Mains.instrumentedRun(args, new ExpSPFvsSMC());
+		Mains.instrumentedRun(args, new ExpSpfSmc());
 	}
 
 }

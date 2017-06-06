@@ -43,12 +43,12 @@ public class OutputHelper
 		writer.close();
 	}
 
-	public static void writeTableAsCSV(String filepath, String [] header, double []... data)
+	public static void writeTableAsCSV(File file, String [] header, double []... data)
 	{
 		if (header.length != data.length)
 			throw new RuntimeException("The number of headers != number of columns in the data");
 		
-		PrintWriter writer = BriefIO.output(new File(filepath));
+		PrintWriter writer = BriefIO.output(file);
 		for (int i = 0; i < header.length; i++) {
 			writer.print(header[i]);
 			if (i < header.length - 1) writer.print(",");

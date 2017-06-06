@@ -10,12 +10,16 @@ import pmcmc.PMCMCProcessor;
 
 public class KitagawaProcessor implements PMCMCProcessor<KitagawaParams> {
 
-	private List<String> logZs = new ArrayList<>();
+	private List<String> lines = new ArrayList<>();
+	private String outputPrefix;
+	public KitagawaProcessor(String outputPrefix) {
+		this.outputPrefix = outputPrefix;
+	}
 	
 	@Override
 	public void output(File file) {
 		PrintWriter writer = BriefIO.output(file);
-		for (String line : logZs)
+		for (String line : lines)
 		{
 			writer.println(line);
 		}
@@ -24,7 +28,12 @@ public class KitagawaProcessor implements PMCMCProcessor<KitagawaParams> {
 
 	@Override
 	public void process(KitagawaParams p) {
-		logZs.add(p.asCommaSeparatedLine());
+		lines.add(p.asCommaSeparatedLine());
+	}
+
+	@Override
+	public String outputPrefix() {
+		return outputPrefix;
 	}
 
 }

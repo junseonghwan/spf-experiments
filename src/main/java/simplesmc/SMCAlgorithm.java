@@ -1,6 +1,8 @@
 package simplesmc;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.SplittableRandom;
 
@@ -34,6 +36,8 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
    */
   private final Random[] randoms;
   
+  private List<Double> effectiveSampleSize;
+  
   /**
    * Compute the SMC algorithm
    * 
@@ -45,16 +49,23 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
     
     int nSMCIterations = proposal.nIterations();
 
+    // instantiate new arraylist each time
+    timeInSeconds = new ArrayList<>(nSMCIterations); 
+    effectiveSampleSize = new ArrayList<>(nSMCIterations);
+    long start = 0, end = 0;
     for (int currentIteration = 0; currentIteration < nSMCIterations - 1; currentIteration++)
     {
+      start = System.currentTimeMillis();
       currentPopulation = propose(currentPopulation, currentIteration + 1);
-      if (currentPopulation.getRelativeESS() < options.essThreshold &&
-          currentIteration < nSMCIterations - 2)
-        currentPopulation = currentPopulation.resample(options.random, options.resamplingScheme);
+      effectiveSampleSize.add(currentPopulation.getESS());
+      if (currentPopulation.getRelativeESS() < options.essThreshold && currentIteration < nSMCIterations - 2)
+    	  currentPopulation = currentPopulation.resample(options.random, options.resamplingScheme);
+      end = System.currentTimeMillis();
+      timeInSeconds.add((end-start)/1000.0);
     }
 
     // TODO: check that this is correct?
-    logZEstimate = currentPopulation.logScaling - options.nParticles;
+    logZEstimate = currentPopulation.logNormEstimate();
     return currentPopulation;
   }
   
@@ -86,15 +97,15 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
       logWeights[particleIndex] = 
         proposed.getLeft().doubleValue() + 
         (isInitial ? 0.0 : Math.log(currentPopulation.getNormalizedWeight(particleIndex)));
-        particles[particleIndex] = (proposed.getRight());
+      particles[particleIndex] = (proposed.getRight());
     });
-    
+
     return ParticlePopulation.buildDestructivelyFromLogWeights(
         logWeights, 
         Arrays.asList(particles),
         isInitial ? 0.0 : currentPopulation.logScaling);
   }
-  
+
   public SMCAlgorithm(SMCProblemSpecification<P> proposal, SMCOptions options)
   {
     this.proposal = proposal;
@@ -102,6 +113,8 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
     this.randoms = new Random[options.nParticles];
     SplittableRandom splitRandom = new SplittableRandom(options.random.nextLong());
     for (int i = 0; i < options.nParticles; i++)
-      this.randoms[i] = new Random(splitRandom.split().nextLong());
+    	this.randoms[i] = new Random(splitRandom.split().nextLong());
   }
+
+  public List<Double> effectiveSampleSize() { return effectiveSampleSize; }
 }
