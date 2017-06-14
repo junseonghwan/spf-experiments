@@ -4,9 +4,9 @@ import java.util.Random;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import distributions.InverseGamma;
 import experiments.kitagawa.KitagawaParams;
 import experiments.kitagawa.KitagawaSMCProblemSpecification;
-import bayonet.distributions.InverseGamma;
 import blang.MCMCAlgorithm;
 import blang.MCMCFactory;
 import blang.annotations.DefineFactor;

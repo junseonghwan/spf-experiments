@@ -17,6 +17,7 @@ import simplesmc.AbstractSMCAlgorithm;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
 import briefj.opt.Option;
+import briefj.opt.OptionSet;
 import briefj.run.Mains;
 
 public class ExpPmmhSpf implements Runnable 
@@ -29,14 +30,14 @@ public class ExpPmmhSpf implements Runnable
 	@Option(required=false) public int R = 500;
 	
 	// model hyperparameters
-	@Option(required=false) public double shape = 1/0.01;
-	@Option(required=false) public double rate = 1/0.01;
+	@Option(required=false) public double shape = 0.01;
+	@Option(required=false) public double rate = 0.01;
 	@Option(required=false) public double sd_v = 0.15;
 	@Option(required=false) public double sd_w = 0.08;
 	
 	// options
-	@Option(name="pmcmc") public PMCMCOptions pmcmcOptions = new PMCMCOptions();
-	@Option(name="spf") public SPFOptions spfOptions = new SPFOptions();
+	@OptionSet(name="pmcmc") public PMCMCOptions pmcmcOptions = new PMCMCOptions();
+	@OptionSet(name="spf") public SPFOptions spfOptions = new SPFOptions();
 
 	@Override
 	public void run() 
@@ -49,15 +50,8 @@ public class ExpPmmhSpf implements Runnable
 
 		MCMCProblemSpecification<KitagawaParams> mcmcProblemSpecification = new KitagawaMCMCProblemSpecification(shape, rate, sd_v, sd_w);
 		KitagawaParams params = mcmcProblemSpecification.initialize(pmcmcOptions.random);
-		spfOptions.numberOfConcreteParticles = 100;
-		spfOptions.maxNumberOfVirtualParticles = 10000;
-		spfOptions.targetedRelativeESS = 1.0;
-		spfOptions.verbose = false;
 		AbstractSMCAlgorithm<Double> spfAlgorithm = new StreamingParticleFilter<>(new KitagawaSMCProblemSpecification(params, ret.getRight()), spfOptions);
 		PMMHAlgorithm<KitagawaParams, Double> pmmh = new PMMHAlgorithm<KitagawaParams, Double>(params, spfAlgorithm, mcmcProblemSpecification, pmcmcOptions, processors, logZProcessor);
-		pmcmcOptions.nIter = 1000;
-		pmcmcOptions.burnIn = 0;
-		pmcmcOptions.thinningPeriod = 20;
 		pmmh.sample(); // calling this function will generate the outputs
 	}
 	

@@ -16,6 +16,7 @@ import simplesmc.AbstractSMCAlgorithm;
 import simplesmc.SMCAlgorithm;
 import simplesmc.SMCOptions;
 import briefj.opt.Option;
+import briefj.opt.OptionSet;
 import briefj.run.Mains;
 
 public class ExpPmmhSmc implements Runnable
@@ -26,7 +27,7 @@ public class ExpPmmhSmc implements Runnable
 	@Option(required=false) public double var_v = 10.0;
 	@Option(required=false) public double var_w = 1.0;
 	@Option(required=false) public int R = 500;
-	
+
 	// model hyperparameters
 	@Option(required=false) public double shape = 0.01;
 	@Option(required=false) public double rate = 0.01;
@@ -34,8 +35,8 @@ public class ExpPmmhSmc implements Runnable
 	@Option(required=false) public double sd_w = 0.08;
 	
 	// options
-	@Option(name="pmcmc") public PMCMCOptions pmcmcOptions = new PMCMCOptions();
-	@Option(name="smc") public SMCOptions smcOptions = new SMCOptions();
+	@OptionSet(name="pmcmc") public PMCMCOptions pmcmcOptions = new PMCMCOptions();
+	@OptionSet(name="smc") public SMCOptions smcOptions = new SMCOptions();
 	
 	@Override
 	public void run()
@@ -48,12 +49,8 @@ public class ExpPmmhSmc implements Runnable
 
 		MCMCProblemSpecification<KitagawaParams> mcmcProblemSpecification = new KitagawaMCMCProblemSpecification(shape, rate, sd_v, sd_w);
 		KitagawaParams params = mcmcProblemSpecification.initialize(pmcmcOptions.random);
-		smcOptions.nParticles = 100;
 		AbstractSMCAlgorithm<Double> smcAlgorithm = new SMCAlgorithm<>(new KitagawaSMCProblemSpecification(params, ret.getRight()), smcOptions);
 		PMMHAlgorithm<KitagawaParams, Double> pmmh = new PMMHAlgorithm<KitagawaParams, Double>(params, smcAlgorithm, mcmcProblemSpecification, pmcmcOptions, processors, logZProcessor);
-		pmcmcOptions.nIter = 100;
-		pmcmcOptions.burnIn = 0;
-		pmcmcOptions.thinningPeriod = 1;
 		pmmh.sample(); // calling this function generates the output containing the parameters, logZ estimates, and number of acceptances
 	}
 

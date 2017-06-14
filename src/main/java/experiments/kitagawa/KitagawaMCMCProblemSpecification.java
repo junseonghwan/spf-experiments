@@ -2,7 +2,7 @@ package experiments.kitagawa;
 
 import java.util.Random;
 
-import bayonet.distributions.InverseGamma;
+import distributions.InverseGamma;
 import bayonet.distributions.Normal;
 import pmcmc.MCMCProblemSpecification;
 
