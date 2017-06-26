@@ -1,7 +1,5 @@
 package experiments.kitagawa;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 import models.Kitagawa;
@@ -11,7 +9,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import pmcmc.LogZProcessor;
 import pmcmc.MCMCProblemSpecification;
 import pmcmc.PMCMCOptions;
-import pmcmc.PMCMCProcessor;
 import pmcmc.PMMHAlgorithm;
 import simplesmc.AbstractSMCAlgorithm;
 import spf.SPFOptions;
@@ -44,14 +41,12 @@ public class ExpPmmhSpf implements Runnable
 	{
 		Pair<double[], double[]> ret = Kitagawa.simulate(random, var_v, var_w, R);
 
-		List<PMCMCProcessor<KitagawaParams>> processors = new ArrayList<PMCMCProcessor<KitagawaParams>>();
-		processors.add(new KitagawaProcessor("spf"));
 		LogZProcessor<KitagawaParams> logZProcessor = new LogZProcessor<>("spf");
 
 		MCMCProblemSpecification<KitagawaParams> mcmcProblemSpecification = new KitagawaMCMCProblemSpecification(shape, rate, sd_v, sd_w);
 		KitagawaParams params = mcmcProblemSpecification.initialize(pmcmcOptions.random);
 		AbstractSMCAlgorithm<Double> spfAlgorithm = new StreamingParticleFilter<>(new KitagawaSMCProblemSpecification(params, ret.getRight()), spfOptions);
-		PMMHAlgorithm<KitagawaParams, Double> pmmh = new PMMHAlgorithm<KitagawaParams, Double>(params, spfAlgorithm, mcmcProblemSpecification, pmcmcOptions, processors, logZProcessor);
+		PMMHAlgorithm<KitagawaParams, Double> pmmh = new PMMHAlgorithm<KitagawaParams, Double>(params, spfAlgorithm, mcmcProblemSpecification, pmcmcOptions, null, logZProcessor);
 		pmmh.sample(); // calling this function will generate the outputs
 	}
 	

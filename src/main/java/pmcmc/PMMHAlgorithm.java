@@ -52,8 +52,18 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 		this.mcmcProblemSpecification = mcmcProblemSpecification;
 		this.options = options;
 		this.params = params;
-		this.processors = processors;
 		this.logZProcessor = logZProcessor;
+		
+		if (processors == null)
+			this.processors = new ArrayList<>();
+		else
+			this.processors = processors;
+		
+		// add the default output processor
+		if (smcAlgorithm instanceof SMCAlgorithm)
+			this.processors.add(new PMCMCDefaultOutputProcessor<>("smc"));
+		else if (smcAlgorithm instanceof StreamingParticleFilter)
+			this.processors.add(new PMCMCDefaultOutputProcessor<>("spf"));
 	}
 
 	public void sample()
@@ -67,6 +77,9 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 		{
 			// propose new values for the parameters
 			P pstar = mcmcProblemSpecification.propose(options.random, params);
+			// quick check:
+			if (Double.isInfinite(mcmcProblemSpecification.logPriorDensity(pstar)))
+					continue;
 			// compute the acceptance ratio
 			double a = mcmcProblemSpecification.logProposalDensity(params, pstar) - mcmcProblemSpecification.logProposalDensity(pstar, params);
 
@@ -98,7 +111,7 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 				params.revert();
 			}
 			
-			if (iter >= options.burnIn && iter % options.thinningPeriod == 0) {
+			if (processors != null && iter >= options.burnIn && iter % options.thinningPeriod == 0) {
 				for (PMCMCProcessor<P> processor : processors)
 					processor.process(pstar); 
 			}
@@ -109,7 +122,7 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 				logZProcessor.process(iter, pstar, logZStar);
 		}
 
-		// output the parameters
+		// output the parameters 
 		File results = Results.getResultFolder();
 		for (PMCMCProcessor<P> processor : processors)
 			processor.output(new File(results, processor.outputPrefix() + "." + processor.getClass().getName() + ".csv"));

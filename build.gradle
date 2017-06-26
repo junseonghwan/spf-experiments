@@ -3,6 +3,9 @@ apply plugin: 'maven'
 apply plugin: 'eclipse'
 apply plugin: 'application'
 
+//mainClassName = "experiments.kitagawa.ExpPmmhSmc"
+mainClassName = "experiments.kitagawa.ExpPmmhSpf"
+
 eclipse { 
   classpath {
     defaultOutputDir = file('bin')

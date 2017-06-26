@@ -34,6 +34,9 @@ public class KitagawaParams implements WithSignature, ModelParameters
 
 	@Override
 	public void revert() {
+		if (old == null)
+			throw new RuntimeException("Nothing to revert!");
+
 		this.var_v.setValue(old.var_v.getValue());
 		this.var_w.setValue(old.var_w.getValue());
 		this.old = null;

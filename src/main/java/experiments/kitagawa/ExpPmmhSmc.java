@@ -1,7 +1,5 @@
 package experiments.kitagawa;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.lang3.tuple.Pair;
@@ -10,7 +8,6 @@ import models.Kitagawa;
 import pmcmc.LogZProcessor;
 import pmcmc.MCMCProblemSpecification;
 import pmcmc.PMCMCOptions;
-import pmcmc.PMCMCProcessor;
 import pmcmc.PMMHAlgorithm;
 import simplesmc.AbstractSMCAlgorithm;
 import simplesmc.SMCAlgorithm;
@@ -43,14 +40,12 @@ public class ExpPmmhSmc implements Runnable
 	{
 		Pair<double[], double[]> ret = Kitagawa.simulate(random, var_v, var_w, R);
 
-		List<PMCMCProcessor<KitagawaParams>> processors = new ArrayList<PMCMCProcessor<KitagawaParams>>();
-		processors.add(new KitagawaProcessor("smc"));
 		LogZProcessor<KitagawaParams> logZProcessor = new LogZProcessor<>("smc");
 
 		MCMCProblemSpecification<KitagawaParams> mcmcProblemSpecification = new KitagawaMCMCProblemSpecification(shape, rate, sd_v, sd_w);
 		KitagawaParams params = mcmcProblemSpecification.initialize(pmcmcOptions.random);
 		AbstractSMCAlgorithm<Double> smcAlgorithm = new SMCAlgorithm<>(new KitagawaSMCProblemSpecification(params, ret.getRight()), smcOptions);
-		PMMHAlgorithm<KitagawaParams, Double> pmmh = new PMMHAlgorithm<KitagawaParams, Double>(params, smcAlgorithm, mcmcProblemSpecification, pmcmcOptions, processors, logZProcessor);
+		PMMHAlgorithm<KitagawaParams, Double> pmmh = new PMMHAlgorithm<KitagawaParams, Double>(params, smcAlgorithm, mcmcProblemSpecification, pmcmcOptions, null, logZProcessor);
 		pmmh.sample(); // calling this function generates the output containing the parameters, logZ estimates, and number of acceptances
 	}
 

@@ -1,4 +1,4 @@
-package experiments.kitagawa;
+package pmcmc;
 
 import java.io.File;
 import java.io.PrintWriter;
@@ -6,13 +6,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 import briefj.BriefIO;
-import pmcmc.PMCMCProcessor;
 
-public class KitagawaProcessor implements PMCMCProcessor<KitagawaParams> {
+public class PMCMCDefaultOutputProcessor<P extends ModelParameters> implements PMCMCProcessor<P> {
 
 	private List<String> lines = new ArrayList<>();
 	private String outputPrefix;
-	public KitagawaProcessor(String outputPrefix) {
+	public PMCMCDefaultOutputProcessor(String outputPrefix) {
 		this.outputPrefix = outputPrefix;
 	}
 	
@@ -27,7 +26,7 @@ public class KitagawaProcessor implements PMCMCProcessor<KitagawaParams> {
 	}
 
 	@Override
-	public void process(KitagawaParams p) {
+	public void process(P p) {
 		lines.add(p.asCommaSeparatedLine());
 	}
 
