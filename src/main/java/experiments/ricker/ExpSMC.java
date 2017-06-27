@@ -1,5 +1,6 @@
 package experiments.ricker;
 
+import java.io.File;
 import java.util.List;
 import java.util.Random;
 
@@ -10,6 +11,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import simplesmc.SMCAlgorithm;
 import simplesmc.SMCOptions;
 import simplesmc.SMCProblemSpecification;
+import util.OutputHelper;
+import bayonet.smc.ParticlePopulation;
 import briefj.opt.Option;
 import briefj.run.Mains;
 
@@ -20,7 +23,7 @@ public class ExpSMC implements Runnable
 	@Option(required=false) public static double phi = 10.0;
 	@Option(required=false) public static double r = 44.7;
 	@Option(required=false) public static double N0 = 7.0;
-	@Option(required=false) public static int T = 10;
+	@Option(required=false) public static int T = 1000;
 	@Option(required=false) public static int numParticles = 1000;
 
 	@Override
@@ -33,7 +36,10 @@ public class ExpSMC implements Runnable
 		SMCOptions options = new SMCOptions();
 		options.nParticles = numParticles;
 		SMCAlgorithm<Double> smcAlgorithm = new SMCAlgorithm<>(problemSpec, options);
-		smcAlgorithm.sample();
+		ParticlePopulation<Double> pop = smcAlgorithm.sample();
+		
+		OutputHelper.writeVector(new File("output/ricker-data.csv"), ret.getLeft());
+		OutputHelper.writeVector(new File("output/ricker-smc.csv"), pop.particles);
 	}
 
 	public static void main(String [] args)

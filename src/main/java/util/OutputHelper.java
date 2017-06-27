@@ -23,12 +23,12 @@ public class OutputHelper
 	 * @param data
 	 * @return
 	 */
-	public static void writeVector(File file, List<Double> data)
+	public static <T> void writeVector(File file, List<T> data)
 	{
 		PrintWriter writer = BriefIO.output(file);
-		for (double val : data)
+		for (T val : data)
 		{
-			writer.println(val);
+			writer.println(val.toString());
 		}
 		writer.close();
 	}

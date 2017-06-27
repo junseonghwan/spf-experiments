@@ -1,5 +1,6 @@
 package experiments.ricker;
 
+import java.io.File;
 import java.util.List;
 import java.util.Random;
 
@@ -8,7 +9,9 @@ import org.apache.commons.lang3.tuple.Pair;
 import simplesmc.SMCProblemSpecification;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
+import util.OutputHelper;
 import models.RickerModel;
+import bayonet.smc.ParticlePopulation;
 import briefj.opt.Option;
 import briefj.run.Mains;
 
@@ -19,8 +22,8 @@ public class ExpSPF implements Runnable
 	@Option(required=false) public static double phi = 10.0;
 	@Option(required=false) public static double r = 44.7;
 	@Option(required=false) public static double N0 = 7.0;
-	@Option(required=false) public static int T = 10;
-	@Option(required=false) public static int numConcreteParticles = 1000;
+	@Option(required=false) public static int T = 1000;
+	@Option(required=false) public static int numConcreteParticles = 100;
 	@Option(required=false) public static int maxVirtualParticles = 10000;
 
 	@Override
@@ -35,8 +38,10 @@ public class ExpSPF implements Runnable
 		options.numberOfConcreteParticles = numConcreteParticles;
 		options.targetedRelativeESS = 1.0;
 		StreamingParticleFilter<Double> spf = new StreamingParticleFilter<>(problemSpec, options);
-		spf.sample();
-		//ParticlePopulation<Double> population= spf.sample();
+		ParticlePopulation<Double> pop = spf.sample();
+
+		OutputHelper.writeVector(new File("output/ricker-data.csv"), ret.getLeft());
+		OutputHelper.writeVector(new File("output/ricker-spf.csv"), pop.particles);
 	}
 	
 	public static void main(String [] args)
