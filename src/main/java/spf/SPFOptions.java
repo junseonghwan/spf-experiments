@@ -20,9 +20,13 @@ public class SPFOptions {
     
     @Option
     public Random resamplingRandom = new Random(1);
-    
+
+    @Option
+    public Random mainRandom = new Random(1);
+
     @Option
     public ResamplingScheme resamplingScheme = ResamplingScheme.MULTINOMIAL;
 
     public static final int DEFAULT_N_CONCRETE_PARTICLES = 1000;
+    
 }

@@ -1,11 +1,15 @@
 package phylo;
 
 import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.math3.distribution.MultivariateNormalDistribution;
 import org.jblas.DoubleMatrix;
 import org.jblas.MatrixFunctions;
+
+import com.google.common.collect.ArrayListMultimap;
 
 import briefj.Indexer;
 import conifer.ctmc.expfam.CTMCExpFam;
@@ -40,7 +44,7 @@ public class LikelihoodCalculator {
 		return P;
 	}
 	
-	private boolean check(DoubleMatrix P)
+	public static boolean check(DoubleMatrix P)
 	{
 		int R = P.rows;
 		int C = P.columns;
@@ -108,6 +112,46 @@ public class LikelihoodCalculator {
 				sum += likelihoodTable[site][x]*learnedModel.pi[x];
 			}
 			logLik += Math.log(sum);
+		}
+		return logLik;
+	}
+	
+	public double computeLogLik(RootedPhylogeny phylogeny)
+	{
+		double logLik = 0.0;
+		
+		List<RootedPhylogeny> nodes = new ArrayList<>();
+		nodes.add(phylogeny);
+		
+		while (!nodes.isEmpty())
+		{
+			RootedPhylogeny node = nodes.remove(0);
+			if (!node.isLeaf()) {
+				RootedPhylogeny left = node.getLeftChild();
+				RootedPhylogeny right = node.getRightChild();
+				nodes.add(left);
+				nodes.add(right);
+				logLik += computeBranchLogLik(node, left, node.getLeftBranchLength());
+				logLik += computeBranchLogLik(node, right, node.getRightBranchLength());
+			}
+		}
+
+		return logLik;
+	}
+	
+	public double computeBranchLogLik(RootedPhylogeny parent, RootedPhylogeny child, double bl)
+	{
+		double [][] P = getTransitionMatrix(bl).toArray2();
+		
+		String parentSeq = parent.getTaxon().getSequence();
+		String childSeq = child.getTaxon().getSequence();
+		
+		double logLik = 0.0;
+		for (int s = 0; s < parentSeq.length(); s++)
+		{
+			int i = model.stateIndexer.o2i(parentSeq.charAt(s) + "");
+			int j = model.stateIndexer.o2i(childSeq.charAt(s) + "");
+			logLik += Math.log(P[i][j]);
 		}
 		return logLik;
 	}

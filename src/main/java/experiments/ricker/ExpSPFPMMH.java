@@ -16,7 +16,7 @@ import spf.StreamingParticleFilter;
 import briefj.opt.Option;
 import briefj.run.Mains;
 
-public class ExpPMMH 
+public class ExpSPFPMMH 
 implements Runnable
 {
 	@Option(required=false) public static Random random = new Random(721);
@@ -41,7 +41,7 @@ implements Runnable
 		spfOptions.maxNumberOfVirtualParticles = maxVirtualParticles;
 		spfOptions.numberOfConcreteParticles = numConcreteParticles;
 		spfOptions.targetedRelativeESS = Double.POSITIVE_INFINITY;
-		spfOptions.verbose = true;
+		spfOptions.verbose = false;
 		StreamingParticleFilter<Double> spf = new StreamingParticleFilter<>(problemSpec, spfOptions);
 		
 		PMCMCOptions pmcmcOptions = new PMCMCOptions();
@@ -55,7 +55,7 @@ implements Runnable
 	
 	public static void main(String [] args)
 	{
-		Mains.instrumentedRun(args, new ExpPMMH());
+		Mains.instrumentedRun(args, new ExpSPFPMMH());
 	}
 
 }

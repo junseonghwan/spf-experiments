@@ -11,6 +11,20 @@ import bayonet.distributions.Poisson;
 
 public class RickerModel 
 {
+	
+	public static List<Pair<List<Double>, List<Integer>>> generate(Random random, int numSimulations, int T, double N0, double phi, double var, double r)
+	{
+		// generate the latent variable and the data (all at once)
+		List<Pair<List<Double>, List<Integer>>> data = new ArrayList<>();
+		for (int i = 1; i <= numSimulations; i++)
+		{
+			Pair<List<Double>, List<Integer>> ret = RickerModel.simulate(new Random(random.nextLong()), T, N0, phi, var, r);
+			data.add(ret);
+		}
+		
+		return data;
+	}
+	
 	/**
 	 * Return a pair of lists of length T + 1 (including N0 and the observation generated for time 0)
 	 * 

@@ -8,6 +8,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.smc.ParticlePopulation;
 import simplesmc.AbstractSMCAlgorithm;
+import simplesmc.ParticleProcessor;
 import simplesmc.SMCProblemSpecification;
 import spf.StreamingPropagator.PropagationResult;
 
@@ -23,14 +24,21 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
 {
   public final SMCProblemSpecification<P> problemSpec;
   private final SPFOptions options;
-  private final Random mainRandom = new Random(1);
   private double logZ = 0.0;
   private List<Double> nImplicitParticles;
+  private List<Double> relESS;
+  private ParticleProcessor<P> processor;
 
   public StreamingParticleFilter(SMCProblemSpecification<P> problemSpec, SPFOptions options)
   {
+    this(problemSpec, options, null);
+  }
+  
+  public StreamingParticleFilter(SMCProblemSpecification<P> problemSpec, SPFOptions options, ParticleProcessor<P> processor)
+  {
     this.problemSpec = problemSpec;
     this.options = options;
+    this.processor = processor;
   }
 
   public ParticlePopulation<P> sample()
@@ -39,6 +47,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
 
     // instantiate new arraylist each time
     nImplicitParticles = new ArrayList<>(nSMCIterations);
+    relESS = new ArrayList<>();
     timeInSeconds = new ArrayList<>(nSMCIterations); 
     long start = 0, end = 0;
 
@@ -50,30 +59,37 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     logZ = propResults.population.logZEstimate();
     end = System.currentTimeMillis();
     nImplicitParticles.add((double)propResults.population.getNumberOfParticles());
+    relESS.add(propResults.population.ess()/options.numberOfConcreteParticles);
     timeInSeconds.add((end - start)/1000.);
+    if (processor != null)
+  	  processor.process(0, propResults.getParticlePopulation());
 
     // recursion
     for (int i = 1; i < nSMCIterations; i++)
     {
       start = System.currentTimeMillis();
-      proposal = new StreamingBootstrapProposal(mainRandom.nextLong(), propResults.getParticlePopulation());
+      proposal = new StreamingBootstrapProposal(options.mainRandom.nextLong(), propResults.getParticlePopulation());
       propagator = new StreamingPropagator<>(proposal, options);
       propResults = propagator.execute(i);
       logZ += propResults.population.logZEstimate();
       end = System.currentTimeMillis();
       nImplicitParticles.add((double)propResults.population.getNumberOfParticles());
+      relESS.add(propResults.population.ess()/options.numberOfConcreteParticles);
       timeInSeconds.add((end - start)/1000.);
+      if (processor != null)
+    	  processor.process(i, propResults.getParticlePopulation());
     }
 
     return propResults.getParticlePopulation();
   }
-
+  
   public double logNormEstimate() { return logZ; }
   public List<Double> nImplicitParticles() { return nImplicitParticles; }
+  public List<Double> relESS() { return relESS; }
   
   private StreamingBootstrapProposal getInitialDistributionProposal()
   {
-    return new StreamingBootstrapProposal(mainRandom.nextLong(), null);
+    return new StreamingBootstrapProposal(options.mainRandom.nextLong(), null);
   }
 
   /**

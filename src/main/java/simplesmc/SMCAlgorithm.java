@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import java.util.SplittableRandom;
-
 import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.smc.ParticlePopulation;
@@ -38,6 +37,8 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
   
   private List<Double> effectiveSampleSize;
   
+  private ParticleProcessor<P> processor = null;
+  
   /**
    * Compute the SMC algorithm
    * 
@@ -45,26 +46,32 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
    */
   public ParticlePopulation<P> sample()
   {
-    ParticlePopulation<P> currentPopulation = propose(null, 0);
-    
     int nSMCIterations = proposal.nIterations();
-
-    // instantiate new arraylist each time
+    
     timeInSeconds = new ArrayList<>(nSMCIterations); 
     effectiveSampleSize = new ArrayList<>(nSMCIterations);
-    long start = 0, end = 0;
-    for (int currentIteration = 0; currentIteration < nSMCIterations - 1; currentIteration++)
+    long start = System.currentTimeMillis();
+    ParticlePopulation<P> currentPopulation = propose(null, 0);
+    if (currentPopulation.getRelativeESS() < options.essThreshold)
+  	  currentPopulation = currentPopulation.resample(options.random, options.resamplingScheme);
+    if (processor != null)
+  	  processor.process(0, currentPopulation);
+    long end = System.currentTimeMillis();
+    effectiveSampleSize.add(currentPopulation.getESS());
+    
+    for (int currentIteration = 1; currentIteration < nSMCIterations; currentIteration++)
     {
       start = System.currentTimeMillis();
-      currentPopulation = propose(currentPopulation, currentIteration + 1);
+      currentPopulation = propose(currentPopulation, currentIteration);
       effectiveSampleSize.add(currentPopulation.getESS());
       if (currentPopulation.getRelativeESS() < options.essThreshold && currentIteration < nSMCIterations - 2)
     	  currentPopulation = currentPopulation.resample(options.random, options.resamplingScheme);
       end = System.currentTimeMillis();
       timeInSeconds.add((end-start)/1000.0);
+      if (processor != null)
+    	  processor.process(currentIteration, currentPopulation);
     }
 
-    // TODO: check that this is correct?
     logZEstimate = currentPopulation.logNormEstimate();
     return currentPopulation;
   }
@@ -108,12 +115,19 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
 
   public SMCAlgorithm(SMCProblemSpecification<P> proposal, SMCOptions options)
   {
+	  this(proposal, options, null);
+  }
+
+  public SMCAlgorithm(SMCProblemSpecification<P> proposal, SMCOptions options, ParticleProcessor<P> processor)
+  {
     this.proposal = proposal;
     this.options = options;
     this.randoms = new Random[options.nParticles];
     SplittableRandom splitRandom = new SplittableRandom(options.random.nextLong());
     for (int i = 0; i < options.nParticles; i++)
     	this.randoms[i] = new Random(splitRandom.split().nextLong());
+    
+    this.processor = processor;
   }
 
   public List<Double> effectiveSampleSize() { return effectiveSampleSize; }

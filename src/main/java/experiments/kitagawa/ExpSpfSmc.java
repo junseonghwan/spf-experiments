@@ -5,6 +5,8 @@ import java.util.*;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import simplesmc.GenericParticleProcessor;
+import simplesmc.ParticleProcessor;
 import simplesmc.SMCProblemSpecification;
 import simplesmc.SMCAlgorithm;
 import simplesmc.SMCOptions;
@@ -24,7 +26,7 @@ public class ExpSpfSmc implements Runnable
 	@Option(required=false) public static double var_v = 10.0;
 	@Option(required=false) public static double var_w = 1.0;
 	@Option(required=false) public static int R = 500;
-	@Option(required=false) public static int numParticles = 100;
+	@Option(required=false) public static int numParticles = 1000;
 	@Option(required=false) public static int numConcreteParticles = 1000;
 	@Option(required=false) public static int maxVirtualParticles = 1000000;
 	@Option(required=false) public static String smcOutputPath = "output/kitagawaSMC.csv";
@@ -77,6 +79,7 @@ public class ExpSpfSmc implements Runnable
 		spfOptions.numberOfConcreteParticles = numConcreteParticles;
 		spfOptions.resamplingScheme = ResamplingScheme.MULTINOMIAL;
 		spfOptions.targetedRelativeESS  = 1.0;
+		spfOptions.verbose = false;
 		ParticlePopulation<Double> samples = runSPF(emissions, var_w, var_v, spfOptions);
 		OutputHelper.writeVector(new File(spfOutputPath), samples.particles);
 	}
@@ -110,14 +113,16 @@ public class ExpSpfSmc implements Runnable
 			}
 		};
 		
-		StreamingParticleFilter<Double> spf = new StreamingParticleFilter<>(problemSpec, options);
+		ParticleProcessor<Double> particleProcessor = new GenericParticleProcessor("output/kitagawa-spf", "particles");
+		StreamingParticleFilter<Double> spf = new StreamingParticleFilter<>(problemSpec, options, particleProcessor);
 		ParticlePopulation<Double> population= spf.sample();
 		return population;
 	}
 
 	private ParticlePopulation<Double> runSMC(double [] y, double var_w, double var_v, SMCOptions options)
 	{
-		SMCAlgorithm<Double> smc = new SMCAlgorithm<>(proposal, options);
+		ParticleProcessor<Double> particleProcessor = new GenericParticleProcessor("output/kitagawa-smc", "particles");
+		SMCAlgorithm<Double> smc = new SMCAlgorithm<>(proposal, options, particleProcessor);
 		return smc.sample(); // NOTE: resampling is not performed for the last iteration of SMC
 	}
 	

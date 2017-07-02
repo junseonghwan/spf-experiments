@@ -6,6 +6,7 @@ import java.util.Random;
 import org.apache.commons.lang3.tuple.Pair;
 
 import phylo.PartialCoalescentState;
+import phylo.PhyloOptions;
 import phylo.Taxon;
 import simplesmc.SMCProblemSpecification;
 
@@ -22,7 +23,18 @@ public class PriorPriorProblemSpecification implements SMCProblemSpecification<P
 	public Pair<Double, PartialCoalescentState> proposeNext(int currentSmcIteration, Random random, PartialCoalescentState currentParticle) {
 		PartialCoalescentState newState = currentParticle.coalesce(random);
 		double logLik = newState.logLikelihood();
-		return Pair.of(logLik, newState);
+		double prevStateLogLik = currentParticle.logLikelihood();
+		/*
+		System.out.println(logLik + ", " + prevStateLogLik);
+		System.out.println(newState.toString());
+		System.out.println(currentParticle.toString());
+		*/
+		if (logLik - prevStateLogLik >= 0.0) {
+			System.out.println("good sample?: " + (logLik - prevStateLogLik));
+			System.out.println(newState.toString());
+			System.out.println(currentParticle.toString());
+		}
+		return Pair.of(logLik - prevStateLogLik, newState);
 	}
 
 	@Override

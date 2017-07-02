@@ -6,13 +6,12 @@ import java.util.List;
 import java.util.Random;
 
 import org.apache.commons.math3.distribution.MultivariateNormalDistribution;
+import org.jblas.DoubleMatrix;
+import org.jblas.MatrixFunctions;
 
 import bayonet.distributions.Exponential;
 import bayonet.distributions.Multinomial;
-import briefj.Indexer;
 import conifer.ctmc.expfam.CTMCExpFam;
-import conifer.ctmc.expfam.CTMCState;
-import conifer.ctmc.expfam.ExpFamMixture;
 import conifer.ctmc.expfam.CTMCExpFam.LearnedReversibleModel;
 import conifer.ctmc.expfam.features.IdentityBivariate;
 import conifer.ctmc.expfam.features.IdentityUnivariate;
@@ -47,7 +46,7 @@ public class GenerateData {
 			RootedPhylogeny t2 = trees.remove(rand.nextInt(trees.size()));
 
 			// sample from exp(rate)
-			double branchLength = Exponential.generate(rand, 1.0/nChoose2(n));
+			double branchLength = Exponential.generate(rand, nChoose2(n));
 			height += branchLength;
 
 			// determine branch length for each of the subtrees to its parent
@@ -70,20 +69,21 @@ public class GenerateData {
 	public static void generateSequencesCTMC(Random rand, CTMCExpFam<String> model, LearnedReversibleModel learnedModel, RootedPhylogeny phylogeny, int numSites)
 	{
 		// get the transition probabilities and the rate matrix from the model
-		double [][] transProbs = getTransitionProbs(learnedModel.getRateMatrix());
-		double [][] Q = learnedModel.getRateMatrix();
+		//double [][] transProbs = getTransitionProbs(learnedModel.getRateMatrix());
+		//double [][] Q = learnedModel.getRateMatrix();
 
 		// generate the data at the root from the stationary distribution
 		String sequence = generateSequenceStationary(rand, model, numSites, learnedModel.pi);
 		phylogeny.getTaxon().setSequence(sequence);
 
 		// traverse the phylogeny in preorder (do it by recursion)
-		generateSequence(rand, model, phylogeny, transProbs, Q); // right subtree
+		generateSequence(rand, model, phylogeny, learnedModel); // right subtree
 	}
 	
 	// helper function for recursively generating the data
 	// generate the data for the children
-	private static void generateSequence(Random rand, CTMCExpFam<String> model, RootedPhylogeny tree, double [][] probs, double [][] Q)
+	//private static void generateSequence(Random rand, CTMCExpFam<String> model, RootedPhylogeny tree, double [][] probs, double [][] Q)
+	private static void generateSequence(Random rand, CTMCExpFam<String> model, RootedPhylogeny tree, LearnedReversibleModel learnedReversibleModel)
 	{
 		String sequence = tree.getTaxon().getSequence();
 		RootedPhylogeny t1 = tree.getLeftChild();
@@ -91,22 +91,38 @@ public class GenerateData {
 		double b1 = tree.getLeftBranchLength();
 		double b2 = tree.getRightBranchLength();
 
-		String leftSequence = simulateSequence(rand, model, sequence, probs, Q, b1);
-		String rightSequence = simulateSequence(rand, model, sequence, probs, Q, b2);
+		String leftSequence = simulateSequence(rand, model, sequence, b1, learnedReversibleModel);
+		String rightSequence = simulateSequence(rand, model, sequence, b2, learnedReversibleModel);
 		
 		t1.getTaxon().setSequence(leftSequence);
 		t2.getTaxon().setSequence(rightSequence);
 		
 		if (!t1.isLeaf())
 		{
-			generateSequence(rand, model, t1, probs, Q);
+			generateSequence(rand, model, t1, learnedReversibleModel);
 		}
 		if (!t2.isLeaf())
 		{
-			generateSequence(rand, model, t2, probs, Q);
+			generateSequence(rand, model, t2, learnedReversibleModel);
 		}
 	}
 	
+	private static String simulateSequence(Random rand, CTMCExpFam<String> model, String sequence, double branchLength, LearnedReversibleModel learnedReversibleModel)
+	{
+		double [][] probs = getTransitionProbs(learnedReversibleModel, branchLength);
+		StringBuilder newSequence = new StringBuilder();
+		for (int i = 0; i < sequence.length(); i++)
+		{
+			String ch = sequence.charAt(i) + "";
+			int state = model.stateIndexer.o2i(ch);
+			int newState = Multinomial.sampleMultinomial(rand, probs[state]);
+			String newCh = model.stateIndexer.i2o(newState);
+			newSequence.append(newCh);
+		}
+		return newSequence.toString();
+	}
+	
+	/*
 	private static String simulateSequence(Random rand, CTMCExpFam<String> model, String sequence, double [][] probs, double [][] Q, double branchLength)
 	{
 		String newSequence = "";
@@ -130,6 +146,7 @@ public class GenerateData {
 		}
 		return newSequence;
 	}
+	*/
 	
 	public static String generateSequenceStationary(Random rand, CTMCExpFam<String> model, int numSites, double [] pi)
 	{
@@ -144,6 +161,7 @@ public class GenerateData {
 		return seq;
 	}
 
+	/*
 	public static double [][] getTransitionProbs(double [][] rateMatrix)
 	{
 		int numStates = rateMatrix[0].length;
@@ -160,6 +178,22 @@ public class GenerateData {
 		
 		return transProbs;
 	}
+	*/
+	
+	public static double[][] getTransitionProbs(LearnedReversibleModel learnedModel, double t)
+	{
+		DoubleMatrix Q = new DoubleMatrix(learnedModel.getRateMatrix());
+		DoubleMatrix Qt = Q.mul(t);
+		// exponentiate the rate matrix
+		DoubleMatrix P = MatrixFunctions.expm(Qt);
+		
+		// check P is proper transition matrix
+		if (!LikelihoodCalculator.check(P))
+			throw new RuntimeException("Not a propoer transition matrix");
+		
+		return P.toArray2();
+	}
+
 
 	public static void main(String [] args)
 	{

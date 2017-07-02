@@ -2,8 +2,6 @@ package experiments.ricker;
 
 import java.util.Random;
 
-import distributions.InverseGamma;
-import bayonet.distributions.Exponential;
 import bayonet.distributions.Normal;
 import bayonet.distributions.Uniform;
 import pmcmc.MCMCProblemSpecification;
@@ -11,10 +9,7 @@ import pmcmc.MCMCProblemSpecification;
 /**
  * Class representing a prior and random walk proposal on Ricker model parameters. 
  * The proposals are Gaussian distribution with variance 2.4, 1.2, 0.2
- * The prior: 
- * phi ~ Uniform(0, 20)
- * log r ~ Exponential(3.5)
- * var ~ IG(1, 1) 
+ * The prior is flat for each of the three parameters
  * 
  * @author Seong-Hwan Jun (s2jun.uw@gmail.com)
  *
@@ -24,10 +19,10 @@ public class RickerMCMCProblemSpecification implements MCMCProblemSpecification<
 
 	@Override
 	public RickerParams initialize(Random random) {
-		// randomly generate the parameters from the prior
+		// randomly generate the parameters from Uniform prior
 		double phi = Uniform.generate(random, 0, 20);
-		double r = Math.exp(Exponential.generate(random, 3));
-		double var = InverseGamma.generate(random, 1.0, 1.0);
+		double r = Math.exp(Uniform.generate(random, 0, 5));
+		double var = Uniform.generate(random, 0.0, 1.0);
 		RickerParams params = new RickerParams(phi, r, var);
 		return params;
 	}
@@ -35,9 +30,9 @@ public class RickerMCMCProblemSpecification implements MCMCProblemSpecification<
 	@Override
 	public RickerParams propose(Random random, RickerParams curr) {
 		// random walk proposal from Gaussian distribution with variance 1.5 for each of the parameters
-		double phi = Normal.generate(random, curr.phi.getValue(), 2.4);
-		double r = Normal.generate(random, curr.r.getValue(), 1.2);
-		double var = Normal.generate(random, curr.var.getValue(), 0.2);
+		double phi = Normal.generate(random, curr.phi.getValue(), 1);
+		double r = Normal.generate(random, curr.r.getValue(), 1);
+		double var = Normal.generate(random, curr.var.getValue(), 1);
 		RickerParams newParams = new RickerParams(phi, r, var);
 		return newParams;
 	}

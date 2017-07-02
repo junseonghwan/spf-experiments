@@ -25,23 +25,25 @@ import conifer.ctmc.expfam.features.IdentityUnivariate;
 import conifer.io.Indexers;
 import bayonet.smc.ParticlePopulation;
 import briefj.Indexer;
+import briefj.collections.Counter;
+import briefj.collections.UnorderedPair;
 import briefj.opt.Option;
 import briefj.run.Mains;
 
 public class PhyloSPF implements Runnable 
 {
 	@Option(required=false)
-	public int numConcreteParticles = 1000;
+	public int numConcreteParticles = 10000;
 	@Option(required=false)
 	public int maxVirtualParticles = 100000;
 	@Option(required=false)
-	public Random rand = new Random(1);
+	public Random rand = new Random(172);
 	@Option(required=false)
-	public double rate = 1.71;
+	public int numSites = 1000;
 	@Option(required=false)
-	public int numSites = 100;
+	public int numTaxa = 10;
 	@Option(required=false)
-	public int numTaxa = 4;
+	public double rate = 1.2;
 	@Option(required=false)
 	public int numSimulations = 1;
 
@@ -81,6 +83,7 @@ public class PhyloSPF implements Runnable
 		}
 
 		PhyloOptions.calc = calc;
+		PhyloOptions.rate = rate;
 
 		// generate the data and the tree
 		RootedPhylogeny phylogeny = GenerateData.sampleRootedPhylogeny(rand, leaves, PhyloOptions.rate);
@@ -89,22 +92,61 @@ public class PhyloSPF implements Runnable
 		SPFOptions options = new SPFOptions();
 		options.maxNumberOfVirtualParticles = maxVirtualParticles;
 		options.numberOfConcreteParticles = numConcreteParticles;
-		options.targetedRelativeESS = 1.0;
+		options.targetedRelativeESS = Double.POSITIVE_INFINITY;
 		PriorPriorProblemSpecification proposal = new PriorPriorProblemSpecification(leaves);
 		StreamingParticleFilter<PartialCoalescentState> spf = new StreamingParticleFilter<>(proposal, options);
 		ParticlePopulation<PartialCoalescentState> pop = spf.sample();
-		
+
 		System.out.println(spf.logNormEstimate());
-		
+
 		// process the population
-		List<Double> heights = new ArrayList<Double>();
+		double [][] dd = new double[numTaxa][numTaxa];
+		double [][] trueDistances = new double[numTaxa][numTaxa];
+		Counter<UnorderedPair<Taxon, Taxon>> truth = phylogeny.getPairwiseDistances(taxonIndexer);
+		double trueHeight = phylogeny.getHeight();
+		System.out.println(phylogeny.getTreeString());
+		for (UnorderedPair<Taxon, Taxon> pair : truth)
+		{
+			int i = taxonIndexer.o2i(pair.getFirst());
+			int j = taxonIndexer.o2i(pair.getSecond());
+			double dist = truth.getCount(pair);
+			trueDistances[i][j] = dist;
+			trueDistances[j][i] = dist;
+		}
+
+		List<Double> heights = new ArrayList<>();
 		for (PartialCoalescentState particle : pop.particles)
 		{
-			heights.add(particle.getCoalescent().getHeight());
+			// compute the distance between two species, normalized by the height
+			Counter<UnorderedPair<Taxon, Taxon>> distances = particle.getCoalescent().getPairwiseDistances(taxonIndexer);
+			double h = particle.getCoalescent().getHeight();
+			//System.out.println(h);
+			heights.add(h);
+			for (UnorderedPair<Taxon, Taxon> pair : distances)
+			{
+				int i = taxonIndexer.o2i(pair.getFirst());
+				int j = taxonIndexer.o2i(pair.getSecond());
+				double dist = distances.getCount(pair);
+				dd[i][j] += dist;
+				dd[j][i] += dist;
+			}
+		}
+		for (int i = 0; i < numTaxa; i++)
+		{
+			for (int j = 0; j < numTaxa; j++)
+			{
+				dd[i][j] /= pop.particles.size();
+			}
 		}
 		System.out.println("truth: " + phylogeny.getHeight());
-		OutputHelper.writeVector(new File("output/phylo-spf.csv"), heights);
-
+		String [] header = new String[numTaxa];
+		for (int i = 1; i <= numTaxa; i++) {
+			header[i-1] = "T" + i;
+		}
+		OutputHelper.writeTableAsCSV(new File("output/phylo-pairwise-dist-spf.csv"), header, dd);
+		OutputHelper.writeTableAsCSV(new File("output/phylo-pairwise-truth-spf.csv"), header, trueDistances);		
+		OutputHelper.writeVector(new File("output/phylo-spf-ess.csv"), spf.relESS());
+		OutputHelper.writeVector(new File("output/phylo-spf-heights.csv"), heights);
 	}
 
 	public static void main(String[] args) 

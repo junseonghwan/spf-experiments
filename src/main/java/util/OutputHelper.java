@@ -43,6 +43,26 @@ public class OutputHelper
 		writer.close();
 	}
 
+	public static <T> void writeTableAsCSV(File file, int numColumns, List<List<T>> data)
+	{
+		PrintWriter writer = BriefIO.output(file);
+		for (List<T> d : data)
+		{
+			if (d.size() != numColumns)
+				throw new RuntimeException("number of columns != actual data size");
+			StringBuilder sb = new StringBuilder();
+			for (int i = 0; i < numColumns; i++)
+			{
+				if (i == numColumns - 1)
+					sb.append(d.get(i).toString());
+				else
+					sb.append(d.get(i).toString() + ", ");
+			}
+			writer.println(sb.toString());
+		}
+		writer.close();
+	}
+	
 	public static void writeTableAsCSV(File file, String [] header, double []... data)
 	{
 		if (header.length != data.length)

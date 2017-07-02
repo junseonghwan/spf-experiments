@@ -29,7 +29,7 @@ public class RickerSMCProblemSpecification implements SMCProblemSpecification<Do
 		// propose the error term from Normal
 		double error = Normal.generate(random, 0.0, params.var.getValue());
 		double newParticle = params.r.getValue() * currentParticle * Math.exp(-currentParticle + error);
-		
+
 		// evaluate the likelihood
 		double logWeight = Poisson.logDensity(obs.get(currentSmcIteration), params.phi.getValue()*newParticle);
 		return Pair.of(logWeight, newParticle);
