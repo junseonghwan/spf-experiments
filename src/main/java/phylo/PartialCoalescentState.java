@@ -46,13 +46,11 @@ public class PartialCoalescentState {
 		
 		// sample from exponential distribution
 		double branchLength = Exponential.generate(rand, nChoose2(newState.trees.size()));
-		//LogInfo.logs("n=" + newState.trees.size() + ", bl=" + branchLength);
 		// select two trees to merge at random
 		RootedPhylogeny t1 = newState.trees.remove(rand.nextInt(newState.trees.size()));
 		RootedPhylogeny t2 = newState.trees.remove(rand.nextInt(newState.trees.size()));
 		
 		newState.height = this.height + branchLength;
-		
 		
 		// determine branch length for each of the subtrees to the parent
 		double b1 = newState.height - t1.getHeight();
@@ -64,11 +62,14 @@ public class PartialCoalescentState {
 		// compute the likelihood
 		double [][] likelihoodTable = PhyloOptions.calc.computeLikelihoodTable(t1, t2, b1, b2);
 		parent.getTaxon().setLikelihoodTable(likelihoodTable);
-		parent.setLogLikelihood(PhyloOptions.calc.computeLoglik(likelihoodTable));
+		double logLik = PhyloOptions.calc.computeLoglik(likelihoodTable);
+		parent.setLogLikelihood(logLik);
+
+		//System.out.println(newState.trees.size() + ", " + t1.getTaxon().toString() + ", " + t2.getTaxon().toString() + ", " + branchLength + ", " + newState.height + ", " + logLik);
 
 		return newState;
-	}	
-	
+	}
+
   public static double nChoose2(double n) { return n*(n-1)/2; }
 		
 	public int numTrees()
@@ -97,12 +98,15 @@ public class PartialCoalescentState {
 	@Override
 	public String toString()
 	{
+		/*
 		StringBuilder sb = new StringBuilder();
 		for (RootedPhylogeny tree : trees)
 		{
 			sb.append(tree.getTreeString());
 		}
 		return sb.toString();
+		*/
+		return height + "";
 	}
 	
 	public static void main(String [] args)

@@ -6,3 +6,4 @@ build/
 results/
 remote-results/
 output/
+.project

@@ -15,6 +15,12 @@ public class Taxon {
 	{
 		this.name = name;
 	}
+
+	public Taxon(String name, String sequence)
+	{
+		this.name = name;
+		this.setSequence(sequence);
+	}
 	
 	public String getName()
 	{
@@ -24,6 +30,7 @@ public class Taxon {
 	public void setSequence(String sequence)
 	{
 		this.sequence = sequence;
+		initLikelihoodTable(PhyloOptions.stateIndexer);
 	}
 	
 	public String getSequence()
@@ -55,10 +62,12 @@ public class Taxon {
 	
 	public double [][] getLikelihoodTable()
 	{
+		/*
 		if (likelihoodTable == null)
 		{
-			initLikelihoodTable(PhyloOptions.calc.getStateIndexer());
+			initLikelihoodTable(PhyloOptions.stateIndexer);
 		}
+		*/
 		return this.likelihoodTable;
 	}
 	

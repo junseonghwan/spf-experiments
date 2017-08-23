@@ -10,6 +10,7 @@ import java.util.Set;
 import org.apache.commons.math3.util.Pair;
 import org.apache.commons.math3.util.Precision;
 
+import phylo.models.Coalescent;
 import briefj.Indexer;
 import briefj.collections.Counter;
 import briefj.collections.UnorderedPair;
@@ -364,7 +365,7 @@ public class RootedPhylogeny
   	
   	double rate = 1.0;
 
-  	RootedPhylogeny phylo = GenerateData.sampleRootedPhylogeny(new Random(1), leaves, rate);
+  	RootedPhylogeny phylo = Coalescent.sampleFromCoalescent(new Random(1), leaves);
   	System.out.println(phylo.getTreeString());
 
   	/*

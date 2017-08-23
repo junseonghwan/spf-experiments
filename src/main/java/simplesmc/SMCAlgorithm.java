@@ -52,19 +52,20 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
     effectiveSampleSize = new ArrayList<>(nSMCIterations);
     long start = System.currentTimeMillis();
     ParticlePopulation<P> currentPopulation = propose(null, 0);
+    effectiveSampleSize.add(currentPopulation.getESS());
     if (currentPopulation.getRelativeESS() < options.essThreshold)
   	  currentPopulation = currentPopulation.resample(options.random, options.resamplingScheme);
+    long end = System.currentTimeMillis();
+    timeInSeconds.add((end-start)/1000.0);
     if (processor != null)
   	  processor.process(0, currentPopulation);
-    long end = System.currentTimeMillis();
-    effectiveSampleSize.add(currentPopulation.getESS());
     
     for (int currentIteration = 1; currentIteration < nSMCIterations; currentIteration++)
     {
       start = System.currentTimeMillis();
       currentPopulation = propose(currentPopulation, currentIteration);
       effectiveSampleSize.add(currentPopulation.getESS());
-      if (currentPopulation.getRelativeESS() < options.essThreshold && currentIteration < nSMCIterations - 2)
+      if (currentPopulation.getRelativeESS() < options.essThreshold && currentIteration < nSMCIterations - 1)
     	  currentPopulation = currentPopulation.resample(options.random, options.resamplingScheme);
       end = System.currentTimeMillis();
       timeInSeconds.add((end-start)/1000.0);
@@ -106,7 +107,7 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
         (isInitial ? 0.0 : Math.log(currentPopulation.getNormalizedWeight(particleIndex)));
       particles[particleIndex] = (proposed.getRight());
     });
-
+    
     return ParticlePopulation.buildDestructivelyFromLogWeights(
         logWeights, 
         Arrays.asList(particles),

@@ -43,6 +43,16 @@ public class OutputHelper
 		writer.close();
 	}
 
+	public static void writeVector(File file, double [] data)
+	{
+		PrintWriter writer = BriefIO.output(file);
+		for (double val : data)
+		{
+			writer.println(val);
+		}
+		writer.close();
+	}
+
 	public static <T> void writeTableAsCSV(File file, int numColumns, List<List<T>> data)
 	{
 		PrintWriter writer = BriefIO.output(file);

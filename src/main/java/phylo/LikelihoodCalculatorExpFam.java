@@ -9,22 +9,20 @@ import org.apache.commons.math3.distribution.MultivariateNormalDistribution;
 import org.jblas.DoubleMatrix;
 import org.jblas.MatrixFunctions;
 
-import com.google.common.collect.ArrayListMultimap;
-
 import briefj.Indexer;
 import conifer.ctmc.expfam.CTMCExpFam;
 import conifer.ctmc.expfam.CTMCExpFam.LearnedReversibleModel;
 import conifer.ctmc.expfam.features.IdentityBivariate;
 import conifer.ctmc.expfam.features.IdentityUnivariate;
 import phylo.RootedPhylogeny;
-import phylo.Taxon;
 
-public class LikelihoodCalculator {
+public class LikelihoodCalculatorExpFam implements LikelihoodCalculatorInterface
+{
 
 	private CTMCExpFam<String> model;
 	private LearnedReversibleModel learnedModel;
 	
-	public LikelihoodCalculator(CTMCExpFam<String> model, LearnedReversibleModel learnedModel)
+	public LikelihoodCalculatorExpFam(CTMCExpFam<String> model, LearnedReversibleModel learnedModel)
 	{
 		this.model = model;
 		this.learnedModel = learnedModel;
@@ -53,6 +51,7 @@ public class LikelihoodCalculator {
 			double sum = P.getRow(r).sum();
 			if (Math.abs(sum - 1.0) > 1e-4)
 			{
+				System.out.println("r: " + sum);
 				return false;
 			}
 		}
@@ -67,6 +66,7 @@ public class LikelihoodCalculator {
 	/*
 	 * compute the likelihood table
 	 */
+	@Override
 	public double [][] computeLikelihoodTable(RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2)
 	{
 		double [][] P1 = getTransitionMatrix(b1).toArray2();
@@ -95,10 +95,11 @@ public class LikelihoodCalculator {
 				likelihoodTable[site][x] = sum1*sum2;
 			}
 		}
-		
+
 		return likelihoodTable;
 	}
-	
+
+	@Override
 	public double computeLoglik(double [][] likelihoodTable)
 	{
 		double logLik = 0.0;
@@ -181,7 +182,7 @@ public class LikelihoodCalculator {
 		double [] w = mvn.sample();
 
 		LearnedReversibleModel learnedModel = model.reversibleModelWithParameters(w);
-		LikelihoodCalculator calc = new LikelihoodCalculator(model, learnedModel);
+		LikelihoodCalculatorExpFam calc = new LikelihoodCalculatorExpFam(model, learnedModel);
 
 		Taxon t1 = new Taxon("T1");
 		Taxon t2 = new Taxon("T2");
