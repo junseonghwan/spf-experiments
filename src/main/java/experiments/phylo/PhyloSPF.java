@@ -2,18 +2,23 @@ package experiments.phylo;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 import phylo.EvolutionaryModel;
 import phylo.FelsensteinPruningAlgorithm;
 import phylo.PartialCoalescentState;
 import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
+import phylo.RootedPhylogenyProcessor;
 import phylo.Taxon;
 import phylo.models.Coalescent;
 import phylo.models.GTRModel;
 import phylo.models.GenerateSequences;
+import phylo.models.JukesCantor;
 import phylo.models.GTRModel.GTRModelParams;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
@@ -47,6 +52,7 @@ public class PhyloSPF implements Runnable
 	public double mutationRate = 1.2;
 	*/
 
+	public static Set<Integer> simulationSet = new HashSet<>();
 	private Indexer<Taxon> taxonIndexer = new Indexer<Taxon>();
 	private List<Taxon> leaves = new ArrayList<Taxon>();
 	/*
@@ -56,6 +62,15 @@ public class PhyloSPF implements Runnable
 	    model.extractUnivariateFeatures(Collections.singleton(new IdentityUnivariate<String>()));
     }
     */
+	
+	static {
+		//int [] simulationNo = new int[]{4, 7, 10, 18, 21, 24, 33, 36, 38, 39};
+		int [] simulationNo = new int[]{};
+		for (int i : simulationNo)
+		{
+			simulationSet.add(i);
+		}
+	}
 
 	@Override
 	public void run() 
@@ -71,8 +86,12 @@ public class PhyloSPF implements Runnable
 		//BriefParallel.process(numSimulations, 4, i -> { System.out.println("Simulation : " + i); simulation(new Random(rand.nextLong()), i);});
 		for (int i = 0; i < numSimulations; i++)
 		{
-			System.out.println("Simulation: " + (i+1)); 
-			simulation(new Random(rand.nextLong()), i+1);
+			System.out.println("Simulation: " + (i+1));
+			Random random = new Random(rand.nextLong());
+			if (simulationSet.size() == 0)
+				simulation(random, i+1);
+			else if (simulationSet.size() > 0 && simulationSet.contains(i+1))
+				simulation(random, i+1);
 		}
 	}
 	
@@ -98,12 +117,14 @@ public class PhyloSPF implements Runnable
 		LikelihoodCalculatorExpFam calc = new LikelihoodCalculatorExpFam(model, learnedModel);
 		*/
 
-		//EvolutionaryModel model = new JukesCantor(mutationRate);
+		EvolutionaryModel model = new JukesCantor(0.005);
+		/*
 		double [] pi = new double[]{0.3,0.2,0.2,0.3};
 		//GTRModelParams gtrParams = new GTRModelParams(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble());
 		GTRModelParams gtrParams = new GTRModelParams(0.26,0.18,0.17,0.15,0.11,0.13);
 		EvolutionaryModel model = new GTRModel(pi, gtrParams);
 		System.out.println(gtrParams.toString());
+		*/
 
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
 
@@ -118,11 +139,16 @@ public class PhyloSPF implements Runnable
 		options.mainRandom = new Random(random.nextLong());
 		options.resamplingRandom = new Random(random.nextLong());
 		options.targetedRelativeESS = Double.POSITIVE_INFINITY;
+		options.storeParticleWeights = true;
 		//options.targetedRelativeESS = targetESS;
 		options.verbose = true;
 		PriorPriorProblemSpecification proposal = new PriorPriorProblemSpecification(leaves);
 		StreamingParticleFilter<PartialCoalescentState> spf = new StreamingParticleFilter<>(proposal, options);
+		long start = System.currentTimeMillis();
 		ParticlePopulation<PartialCoalescentState> pop = spf.sample();
+		long end = System.currentTimeMillis();
+		double samplingTime = (end - start)/1000.0;
+		System.out.println("Sampling time=" + samplingTime);
 
 		// process the population
 		double [][] dd = new double[numTaxa][numTaxa];
@@ -138,10 +164,18 @@ public class PhyloSPF implements Runnable
 			trueDistances[j][i] = dist;
 		}
 
+		RootedPhylogenyProcessor processor = new RootedPhylogenyProcessor(phylogeny, taxonIndexer);
+		int N = pop.particles.size();
 		List<Double> heights = new ArrayList<>();
+		System.out.println("Begin processing the particle population. Size=" + N);
+		start = System.currentTimeMillis();
 		for (PartialCoalescentState particle : pop.particles)
 		{
+			processor.process(particle, 1.0/N);
+			heights.add(particle.getCoalescent().getHeight());
+
 			// compute the distance between two species
+			/*
 			Counter<UnorderedPair<Taxon, Taxon>> distances = particle.getCoalescent().getPairwiseDistances(taxonIndexer);
 			double h = particle.getCoalescent().getHeight();
 			//System.out.println(h);
@@ -154,7 +188,9 @@ public class PhyloSPF implements Runnable
 				dd[i][j] += dist;
 				dd[j][i] += dist;
 			}
+			*/
 		}
+		/*
 		for (int i = 0; i < numTaxa; i++)
 		{
 			for (int j = 0; j < numTaxa; j++)
@@ -162,6 +198,18 @@ public class PhyloSPF implements Runnable
 				dd[i][j] /= pop.particles.size();
 			}
 		}
+		*/
+		Counter<UnorderedPair<Taxon, Taxon>> dist = processor.getMeanDistances();
+		for (UnorderedPair<Taxon, Taxon> key : dist.keySet())
+		{
+			int i = taxonIndexer.o2i(key.getFirst());
+			int j = taxonIndexer.o2i(key.getSecond());
+			dd[i][j] = dist.getCount(key);
+			dd[j][i] = dd[i][j];
+		}
+		end = System.currentTimeMillis();
+		double particleProcessingTime = (end - start)/1000.0;
+		System.out.println("Processing time=" + particleProcessingTime);
 
 		// compute the likelihood of the data given the true tree: p(y | t, \theta)
 		System.out.println(phylogeny.getTreeString());
@@ -172,7 +220,7 @@ public class PhyloSPF implements Runnable
 		// get the estimate of the marginal log likelihood
 		double logZ = spf.logNormEstimate();
 		System.out.println("logZ:" + logZ);
-		
+
 		String [] header = new String[numTaxa];
 		for (int i = 1; i <= numTaxa; i++) {
 			header[i-1] = "T" + i;
@@ -183,7 +231,8 @@ public class PhyloSPF implements Runnable
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-ess.csv"), spf.relESS());
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-heights.csv"), heights);
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-height-truth.csv"), new double[]{trueHeight});
-		
+		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-logZ.csv"), new double[]{logZ});
+		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-timing.csv"), new double[]{samplingTime, particleProcessingTime});
 		return spf.logNormEstimate();
 	}
 

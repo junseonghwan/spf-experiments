@@ -35,7 +35,7 @@ public class PartialCoalescentState {
 	}
 	
 	// Leaves the current state un-touched, including the trees (RootedPhylogeny) and everything else related to it
-	public PartialCoalescentState coalesce(Random rand)
+	public PartialCoalescentState coalesce(Random rand, boolean stream)
 	{
 		PartialCoalescentState newState = new PartialCoalescentState();
 		for (int i = 0; i < trees.size(); i++)
@@ -43,7 +43,7 @@ public class PartialCoalescentState {
 			newState.trees.add(trees.get(i));
 		}
 		newState.id = this.id;
-		
+
 		// sample from exponential distribution
 		double branchLength = Exponential.generate(rand, nChoose2(newState.trees.size()));
 		// select two trees to merge at random
@@ -60,11 +60,16 @@ public class PartialCoalescentState {
 		newState.trees.add(parent);
 
 		// compute the likelihood
-		double [][] likelihoodTable = PhyloOptions.calc.computeLikelihoodTable(t1, t2, b1, b2);
-		parent.getTaxon().setLikelihoodTable(likelihoodTable);
-		double logLik = PhyloOptions.calc.computeLoglik(likelihoodTable);
+		double logLik = 0.0;
+		if (stream) {
+			logLik = PhyloOptions.calc.computeLoglikInStream(t1, t2, b1, b2);
+		} else {
+			double [][] likelihoodTable = PhyloOptions.calc.computeLikelihoodTable(t1, t2, b1, b2);
+			parent.getTaxon().setLikelihoodTable(likelihoodTable);
+			logLik = PhyloOptions.calc.computeLoglik(likelihoodTable);
+		}
 		parent.setLogLikelihood(logLik);
-
+		
 		//System.out.println(newState.trees.size() + ", " + t1.getTaxon().toString() + ", " + t2.getTaxon().toString() + ", " + branchLength + ", " + newState.height + ", " + logLik);
 
 		return newState;

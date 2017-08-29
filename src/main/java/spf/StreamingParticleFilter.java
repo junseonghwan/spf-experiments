@@ -48,12 +48,13 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     // instantiate new arraylist each time
     nImplicitParticles = new ArrayList<>(nSMCIterations);
     relESS = new ArrayList<>();
-    timeInSeconds = new ArrayList<>(nSMCIterations); 
+    timeInSeconds = new ArrayList<>(nSMCIterations);
     long start = 0, end = 0;
 
+    System.out.println("Iter=" + 1);
     // initial distribution
     start = System.currentTimeMillis();
-    StreamingBootstrapProposal proposal = getInitialDistributionProposal();
+    ProposalWithRestart<P> proposal = getInitialDistributionProposal();
     StreamingPropagator<P> propagator = new StreamingPropagator<P>(proposal, options);
     PropagationResult<P> propResults = propagator.execute(0);
     logZ = propResults.population.logZEstimate();
@@ -67,8 +68,13 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     // recursion
     for (int i = 1; i < nSMCIterations; i++)
     {
+        System.out.println("Iter=" + (i+1));
+
       start = System.currentTimeMillis();
-      proposal = new StreamingBootstrapProposal(options.mainRandom.nextLong(), propResults.getParticlePopulation());
+      if (options.storeParticleWeights)
+    	  proposal = new StreamingProposalWithWeights<>(options.mainRandom.nextLong(), problemSpec, propResults.getParticlePopulation());
+      else
+    	  proposal = new StreamingBootstrapProposal(options.mainRandom.nextLong(), propResults.getParticlePopulation());
       propagator = new StreamingPropagator<>(proposal, options);
       propResults = propagator.execute(i);
       logZ += propResults.population.logZEstimate();
@@ -87,9 +93,12 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
   public List<Double> nImplicitParticles() { return nImplicitParticles; }
   public List<Double> relESS() { return relESS; }
   
-  private StreamingBootstrapProposal getInitialDistributionProposal()
+  private ProposalWithRestart<P> getInitialDistributionProposal()
   {
-    return new StreamingBootstrapProposal(options.mainRandom.nextLong(), null);
+	  if (options.storeParticleWeights)
+		  return new StreamingProposalWithWeights<>(options.mainRandom.nextLong(), problemSpec, null);
+	  else
+		  return new StreamingBootstrapProposal(options.mainRandom.nextLong(), null);
   }
 
   /**
@@ -129,6 +138,16 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
           : problemSpec.proposeNext(currentSmcIteration, random, sampleOldLatent());
       nCalls++;
       return curLatent;
+    }
+    
+    @Override
+    public double nextLogWeight(int currentSmcIteration)
+    {
+        double curWeight = isInitial() 
+                ? problemSpec.proposeInitialStream(random)
+                : problemSpec.proposeNextStream(currentSmcIteration, random, sampleOldLatent());
+            nCalls++;
+        return curWeight;    	
     }
     
     private boolean isInitial() 

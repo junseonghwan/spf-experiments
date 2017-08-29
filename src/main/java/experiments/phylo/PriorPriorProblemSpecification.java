@@ -20,25 +20,31 @@ public class PriorPriorProblemSpecification implements SMCProblemSpecification<P
 
 	@Override
 	public Pair<Double, PartialCoalescentState> proposeNext(int currentSmcIteration, Random random, PartialCoalescentState currentParticle) {
-		PartialCoalescentState newState = currentParticle.coalesce(random);
+		PartialCoalescentState newState = currentParticle.coalesce(random, false);
 		double logLik = newState.logLikelihood();
 		double prevStateLogLik = currentParticle.logLikelihood();
-		/*
-		System.out.println(logLik + " - " + prevStateLogLik + " = " + (logLik - prevStateLogLik));
-		System.out.println(newState.toString());
-		System.out.println(currentParticle.toString());
-		if (logLik - prevStateLogLik >= 0.0) {
-			System.out.println("good sample?: " + (logLik - prevStateLogLik));
-			System.out.println(newState.toString());
-			System.out.println(currentParticle.toString());
-		}
-		*/
-		return Pair.of(logLik - prevStateLogLik, newState);
+		double w = logLik - prevStateLogLik;
+		return Pair.of(w, newState);
+	}
+	
+	@Override
+	public double proposeNextStream(int currentSmcIteration, Random random, PartialCoalescentState currentParticle) 
+	{
+		PartialCoalescentState newState = currentParticle.coalesce(random, true);
+		double logLik = newState.logLikelihood();
+		double prevStateLogLik = currentParticle.logLikelihood();
+		double w = logLik - prevStateLogLik;
+		return (w);
 	}
 
 	@Override
 	public Pair<Double, PartialCoalescentState> proposeInitial(Random random) {
 		return proposeNext(0, random, initialState);
+	}
+
+	@Override
+	public double proposeInitialStream(Random random) {
+		return proposeNextStream(0, random, initialState);
 	}
 
 	@Override

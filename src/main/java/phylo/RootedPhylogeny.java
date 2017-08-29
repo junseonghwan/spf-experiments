@@ -6,6 +6,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.Stack;
 
 import org.apache.commons.math3.util.Pair;
 import org.apache.commons.math3.util.Precision;
@@ -100,7 +101,7 @@ public class RootedPhylogeny
   {
   	Counter<UnorderedPair<Taxon, Taxon>> distance = new Counter<UnorderedPair<Taxon,Taxon>>();
   	
-  	// initialize the distances to all 0
+  	// initialize the distances to 0
   	for (int i = 0; i < indexer.size(); i++)
   	{
   		Taxon taxon = indexer.i2o(i);
@@ -118,7 +119,7 @@ public class RootedPhylogeny
   	//pairwiseDistanceHelper(this, pairwise);
   	return distance;
   }
-  
+    
   private Set<Taxon> pairwiseDistanceRecursion(RootedPhylogeny tree, Counter<UnorderedPair<Taxon, Taxon>> distance, double bl, Indexer<Taxon> indexer)
   {
   	if (tree.isLeaf())
@@ -363,8 +364,6 @@ public class RootedPhylogeny
     	indexer.addToIndex(taxon);
   	}
   	
-  	double rate = 1.0;
-
   	RootedPhylogeny phylo = Coalescent.sampleFromCoalescent(new Random(1), leaves);
   	System.out.println(phylo.getTreeString());
 

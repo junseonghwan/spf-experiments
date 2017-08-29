@@ -30,6 +30,11 @@ public interface SMCProblemSpecification<P>
    */
   public Pair<Double, P>  proposeNext(int currentSmcIteration, Random random, P currentParticle);
   
+  default public double proposeNextStream(int currentSmcIteration, Random random, P currentParticle)
+  {
+	  return proposeNext(currentSmcIteration, random, currentParticle).getKey();
+  }
+  
   /**
    * 
    * @param random
@@ -37,6 +42,11 @@ public interface SMCProblemSpecification<P>
    */
   public Pair<Double, P>  proposeInitial(Random random);
   
+  default public double  proposeInitialStream(Random random)
+  {
+	  return proposeInitial(random).getKey();
+  }
+
   /**
    * @return Number of iterations, including the initial step. For example, this is the length of
    *   the chain in an HMM context

@@ -1,5 +1,6 @@
 package phylo;
 
+import briefj.BriefParallel;
 import phylo.models.DNAIndexer;
 
 public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterface
@@ -9,7 +10,7 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 	{
 		this.model = model;
 	}
-
+	
 	@Override
 	public double [][] computeLikelihoodTable(RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2)
 	{
@@ -24,6 +25,20 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 
 		double [][] likelihoodTable = new double[numSites][numChars];
 
+		BriefParallel.process(numSites, 4, s -> {
+			for (int x = 0; x < numChars; x++)
+			{
+				double sum1 = 0.0;
+				double sum2 = 0.0;
+				for (int y = 0; y < numChars; y++)
+				{
+					sum1 += (transitionProbs1[x][y] * table1[s][y]);
+					sum2 += (transitionProbs2[x][y] * table2[s][y]);
+				}
+				likelihoodTable[s][x] = sum1 * sum2;
+			}			
+		});
+		/*
 		for (int s = 0; s < numSites; s++)
 		{
 			for (int x = 0; x < numChars; x++)
@@ -38,6 +53,7 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 				likelihoodTable[s][x] = sum1 * sum2;
 			}
 		}
+		*/
 
 		return likelihoodTable;
 	}
@@ -75,4 +91,39 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 		}
 	}
 
+	@Override
+	public double computeLoglikInStream(RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2) 
+	{
+		double [][] transitionProbs1 = PhyloUtils.getTransitionMatrix(model, b1);
+		double [][] transitionProbs2 = PhyloUtils.getTransitionMatrix(model, b2);
+
+		double [][] table1 = t1.getTaxon().getLikelihoodTable();
+		double [][] table2 = t2.getTaxon().getLikelihoodTable();
+
+		double [] pi = model.getStationaryDistribution();
+
+		int numSites = table1.length;
+		int numChars = table1[0].length;
+
+		double logLik = 0.0;
+
+		for (int s = 0; s < numSites; s++)
+		{
+			double sum = 0.0;
+			for (int x = 0; x < numChars; x++)
+			{
+				double sum1 = 0.0;
+				double sum2 = 0.0;
+				for (int y = 0; y < numChars; y++)
+				{
+					sum1 += (transitionProbs1[x][y] * table1[s][y]);
+					sum2 += (transitionProbs2[x][y] * table2[s][y]);
+				}
+				sum += pi[x] * sum1 * sum2;
+			}
+			logLik += Math.log(sum);
+		}
+		
+		return logLik;
+	}
 }

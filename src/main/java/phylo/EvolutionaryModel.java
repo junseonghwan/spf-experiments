@@ -1,7 +1,9 @@
 package phylo;
 
+import org.jblas.DoubleMatrix;
+
 public interface EvolutionaryModel 
 {
-	public double [][] getRateMatrix();
+	public DoubleMatrix getRateMatrix();
 	public double [] getStationaryDistribution();
 }

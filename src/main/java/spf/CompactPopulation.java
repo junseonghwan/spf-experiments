@@ -1,6 +1,9 @@
 package spf;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 import bayonet.math.NumericalUtils;
 
 
@@ -13,8 +16,15 @@ import bayonet.math.NumericalUtils;
  */
 public class CompactPopulation
 {
+	private boolean storeWeights = false;
+	private List<Double> logWeights;
   private int nParticles = 0;
   
+	
+	public CompactPopulation(boolean storeWeights) { 
+		this.storeWeights = storeWeights; 
+		this.logWeights = new ArrayList<>();
+	}
   /**
    * Sum of the unnormalized weights (log scale)
    */
@@ -35,6 +45,11 @@ public class CompactPopulation
     nParticles++;
     logSum          = NumericalUtils.logAdd(logSum,              logWeight);
     logSumOfSquares = NumericalUtils.logAdd(logSumOfSquares, 2 * logWeight);
+    //System.out.println("111," + logWeight + ", " + logSum);
+    
+    if (storeWeights) {
+    	logWeights.add(logWeight);
+    }
   }
   
   /**
@@ -62,4 +77,6 @@ public class CompactPopulation
   {
     return logSumOfSquares;
   }
+  
+  public List<Double> getLogWeights() { return logWeights; }
 }

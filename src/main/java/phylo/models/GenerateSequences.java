@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import org.jblas.DoubleMatrix;
 import org.jblas.MatrixFunctions;
 
 import bayonet.distributions.Multinomial;
@@ -50,11 +49,12 @@ public class GenerateSequences
 	{
 		Indexer<String> dnaIndexer = DNAIndexer.indexer;
 		StringBuilder childSeq = new StringBuilder();
-		DoubleMatrix Q = new DoubleMatrix(model.getRateMatrix());
-		double [][] P = MatrixFunctions.expm(Q.mul(bl)).toArray2();
+		double [][] P = MatrixFunctions.expm(model.getRateMatrix().mul(bl)).toArray2();
+		double [] probs;
 		for (int i = 0; i < parentSeq.length(); i++)
 		{
-			int idx = Multinomial.sampleMultinomial(random, P[dnaIndexer.o2i(parentSeq.charAt(i) + "")]);
+			probs = P[dnaIndexer.o2i(parentSeq.charAt(i) + "")];
+			int idx = Multinomial.sampleMultinomial(random, probs);
 			childSeq.append(dnaIndexer.i2o(idx));
 		}
 		return childSeq.toString();

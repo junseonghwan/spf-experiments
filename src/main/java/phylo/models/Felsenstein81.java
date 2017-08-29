@@ -1,5 +1,7 @@
 package phylo.models;
 
+import org.jblas.DoubleMatrix;
+
 import bayonet.math.NumericalUtils;
 import briefj.Indexer;
 import phylo.EvolutionaryModel;
@@ -7,7 +9,7 @@ import phylo.EvolutionaryModel;
 public class Felsenstein81 implements EvolutionaryModel
 {
 	private double [] pi;
-	private double [][] Q;
+	private DoubleMatrix Q;
 	public Felsenstein81(double [] pi)
 	{
 		this.pi = pi;
@@ -25,7 +27,7 @@ public class Felsenstein81 implements EvolutionaryModel
 		double sum = 0.0;
 		Indexer<String> dnaIndexer = DNAIndexer.indexer;
 		int numChars = dnaIndexer.size();
-		Q = new double[numChars][numChars]; 
+		double [][] Q = new double[numChars][numChars]; 
 		for (int i = 0; i < numChars; i++)
 		{
 			sum = 0.0;
@@ -37,15 +39,16 @@ public class Felsenstein81 implements EvolutionaryModel
 				}
 			}
 			Q[i][i] = -sum;
-		}		
+		}
+		this.Q = new DoubleMatrix(Q);
 	}
 
 	@Override
-	public double[][] getRateMatrix() 
+	public DoubleMatrix getRateMatrix() 
 	{
 		if (Q == null)
 			constructRateMatrix(this.pi);
-		return Q;
+		return this.Q;
 	}
 
 	@Override

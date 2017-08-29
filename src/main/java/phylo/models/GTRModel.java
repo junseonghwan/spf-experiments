@@ -1,5 +1,7 @@
 package phylo.models;
 
+import org.jblas.DoubleMatrix;
+
 import briefj.Indexer;
 import phylo.EvolutionaryModel;
 
@@ -7,7 +9,7 @@ public class GTRModel implements EvolutionaryModel
 {
 	private GTRModelParams gtrParams;
 	private double [] pi;
-	private double [][] Q;
+	private DoubleMatrix Q;
 	private double [][] params;
 	public GTRModel(double [] pi, GTRModelParams gtrParams)
 	{
@@ -20,7 +22,7 @@ public class GTRModel implements EvolutionaryModel
 	{
 		Indexer<String> dnaIndexer = DNAIndexer.indexer;
 		int numChars = dnaIndexer.size();
-		Q = new double[numChars][numChars];
+		double [][] Q = new double[numChars][numChars];
 		params = new double[numChars][numChars];
 		params[0][1] = gtrParams.alpha;
 		params[0][2] = gtrParams.beta;
@@ -47,16 +49,16 @@ public class GTRModel implements EvolutionaryModel
 			}
 			Q[i][i] = -sum;
 		}
+		this.Q = new DoubleMatrix(Q);
 	}
 
 	@Override
-	public double[][] getRateMatrix() {
+	public DoubleMatrix getRateMatrix() {
 		return Q;
 	}
 
 	@Override
 	public double[] getStationaryDistribution() {
-		// TODO Auto-generated method stub
 		return this.pi;
 	}
 	

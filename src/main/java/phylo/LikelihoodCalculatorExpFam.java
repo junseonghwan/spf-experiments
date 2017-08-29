@@ -117,6 +117,40 @@ public class LikelihoodCalculatorExpFam implements LikelihoodCalculatorInterface
 		return logLik;
 	}
 	
+	@Override
+	public double computeLoglikInStream(RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2) {
+		double [][] P1 = getTransitionMatrix(b1).toArray2();
+		double [][] P2 = getTransitionMatrix(b2).toArray2();
+		
+		Indexer<String> stateIndexer = getStateIndexer();
+		double [][] l1 = t1.getTaxon().getLikelihoodTable();
+		double [][] l2 = t2.getTaxon().getLikelihoodTable();
+		int s = l1.length;
+		int b = stateIndexer.size();
+
+		// compute the dynamic programming table for the parent node
+		double logLik = 0.0;
+		for (int site = 0; site < s; site++)
+		{
+			double sum = 0.0;
+			for (int x = 0; x < b; x++)
+			{
+				double sum1 = 0.0;
+				double sum2 = 0.0;
+				for (int y = 0; y < b; y++)
+				{
+					sum1 += (P1[x][y]*l1[site][y]);
+					sum2 += (P2[x][y]*l2[site][y]);
+				}
+				sum += learnedModel.pi[x] * sum1 * sum2;
+			}
+			logLik += Math.log(sum);
+		}
+
+		return logLik;
+	}
+
+	
 	public double computeLogLik(RootedPhylogeny phylogeny)
 	{
 		double logLik = 0.0;
@@ -219,4 +253,5 @@ public class LikelihoodCalculatorExpFam implements LikelihoodCalculatorInterface
 		System.out.println(totalProb); // should be 1.0
 		
 	}
+
 }

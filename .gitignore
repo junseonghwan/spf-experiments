@@ -7,3 +7,4 @@ results/
 remote-results/
 output/
 .project
+*.class

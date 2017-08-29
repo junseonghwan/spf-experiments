@@ -26,6 +26,9 @@ public class SPFOptions {
 
     @Option
     public ResamplingScheme resamplingScheme = ResamplingScheme.MULTINOMIAL;
+    
+    @Option
+    public boolean storeParticleWeights = true;
 
     public static final int DEFAULT_N_CONCRETE_PARTICLES = 1000;
     

@@ -82,8 +82,10 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 					continue;
 			// compute the acceptance ratio
 			double a = mcmcProblemSpecification.logProposalDensity(params, pstar) - mcmcProblemSpecification.logProposalDensity(pstar, params);
+			if (Double.isInfinite(a))
+				continue;
 
-			System.out.println(iter + ", " + params + ", " + logZCurr + ", " + logPriorCurr + ", " + a);
+			System.out.println(iter + ", " + params.asCommaSeparatedLine() + ", " + logZCurr + ", " + logPriorCurr + ", " + a);
 
 			// TODO: instantiate new AbstractSMCAlgorithm for each iteration?
 			// update the params with the newly proposed pstar and run SMC algorithm to get an estimate of the marginal likelihood
@@ -97,7 +99,7 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 			a += logZStar + logPriorStar;
 			a -= (logZCurr + logPriorCurr);
 			double u = options.random.nextDouble();
-			System.out.println(iter + "*, " + pstar + ", " + logZStar + ", " + logPriorStar + ", " + a);
+			System.out.println(iter + "*, " + pstar.asCommaSeparatedLine() + ", " + logZStar + ", " + logPriorStar + ", " + a);
 
 			a = Math.min(1.0, Math.exp(a));
 			System.out.println("a: " + Math.round(a*100)/100.0 + ", u: " + u);
