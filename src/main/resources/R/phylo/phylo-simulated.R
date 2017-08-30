@@ -6,7 +6,7 @@ sum1k <- rep(0, numSimul)
 quan1k<-rep(0, numSimul)
 hh<-rep(0, numSimul)
 dd<-rep(0, numSimul)
-pdf("~/temp/file1.pdf",width=6,height=4,paper='special')
+pdf("~/temp/file2.pdf",width=6,height=4,paper='special')
 for (i in 1:numSimul)
 {
   d1k<-read.csv(paste(dir1k, "output", i, "/phylo-", method_type, "-heights.csv", sep=""), header=F)
@@ -24,7 +24,7 @@ for (i in 1:numSimul)
   plot(hclust(dist(trueDistMatrix)), main="true tree")
   plot(hclust(dist(distMatrix)), main="mean tree")
   diff<-trueDistMatrix - distMatrix
-  dd[i]<-mean(diff[upper.tri(trueDistMatrix)]^2)
+  dd[i]<-sum(diff[upper.tri(trueDistMatrix)]^2)
   plot(density(diff[upper.tri(trueDistMatrix)]))
 }
 dev.off()

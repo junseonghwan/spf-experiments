@@ -25,6 +25,7 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 
 		double [][] likelihoodTable = new double[numSites][numChars];
 
+		/*
 		BriefParallel.process(numSites, 4, s -> {
 			for (int x = 0; x < numChars; x++)
 			{
@@ -38,7 +39,7 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 				likelihoodTable[s][x] = sum1 * sum2;
 			}			
 		});
-		/*
+		*/
 		for (int s = 0; s < numSites; s++)
 		{
 			for (int x = 0; x < numChars; x++)
@@ -53,7 +54,6 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 				likelihoodTable[s][x] = sum1 * sum2;
 			}
 		}
-		*/
 
 		return likelihoodTable;
 	}

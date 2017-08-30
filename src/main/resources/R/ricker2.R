@@ -1,7 +1,7 @@
 library(ggplot2)
 
-numSimul <- 10
-T <- 100
+numSimul <- 1
+T <- 50
 coverage_spf<-matrix(0, ncol = T, nrow = numSimul)
 coverage_smc<-matrix(0, ncol = T, nrow = numSimul)
 for (i in 1:numSimul)

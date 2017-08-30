@@ -56,7 +56,7 @@ public class PartialCoalescentState {
 		double b1 = newState.height - t1.getHeight();
 		double b2 = newState.height - t2.getHeight();
 		
-		RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t" + newState.id++), t1, t2, b1, b2, newState.height);
+		RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t" + newState.id++), t1, t2, b1, b2, newState.height, true);
 		newState.trees.add(parent);
 
 		// compute the likelihood

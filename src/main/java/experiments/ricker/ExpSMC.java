@@ -20,30 +20,35 @@ import briefj.run.Results;
 public class ExpSMC implements Runnable
 {
 	@Option(required=false) public static Random random = new Random(1721);
-	@Option(required=false) public static double var = 2.3;
+	@Option(required=false) public static double var = 0.3;
 	@Option(required=false) public static double phi = 10.0;
-	@Option(required=false) public static double r = 44.7;
+	@Option(required=false) public static double r = 44.70118;
+	@Option(required=false) public static double c = 1.0;
 	@Option(required=false) public static double N0 = 7.0;
-	@Option(required=false) public static int T = 100;
-	@Option(required=false) public static int numParticles = 10000;
+	@Option(required=false) public static int T = 50;
+	@Option(required=false) public static int numParticles = 1000;
 	@Option(required=false) public static int numSimulations = 1;
+	public final static String data_path = "output/ricker-data.csv";
 
 	@Override
 	public void run()
 	{
-		// generate the latent variable and the data (all at once)
-		List<Pair<List<Double>, List<Integer>>> data = RickerModel.generate(random, numSimulations, T, N0, phi, var, r);
+		// generate the latent variable and the data
+		//List<Pair<List<Double>, List<Integer>>> data = RickerModel.generate(random, numSimulations, T, N0, phi, var, r);
+		// read the data
+		Pair<List<Double>, List<Integer>> ret = RickerModel.readFromFile(data_path);
+		RickerParams params = new RickerParams(phi, r, var);
 
-		// now, run SPF and infer the latent variables
+		// now, run SMC and infer the latent variables
 		for (int i = 0; i < numSimulations; i++)
 		{
-			Pair<List<Double>, List<Integer>> ret = data.get(i);
-			RickerParams params = new RickerParams(phi, r, var);
+			Random rand = new Random(random.nextLong());
+			//Pair<List<Double>, List<Integer>> ret = data.get(i);
 
 			SMCProblemSpecification<Double> problemSpec = new RickerSMCProblemSpecification(T, params, ret.getRight());
 			SMCOptions options = new SMCOptions();
 			options.nParticles = numParticles;
-			options.random = new Random(random.nextLong());
+			options.random = rand;
 
 			File outputDest = new File(Results.getResultFolder(), "/ricker-smc/simul" + (i+1) + "/");
 			GenericParticleProcessor rickerParticleProcessor = new GenericParticleProcessor(outputDest.getAbsolutePath(), "particles/population");

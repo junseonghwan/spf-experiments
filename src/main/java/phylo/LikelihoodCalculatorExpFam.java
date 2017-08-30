@@ -237,7 +237,7 @@ public class LikelihoodCalculatorExpFam implements LikelihoodCalculatorInterface
 				t2.setSequence(seq2);
 				t2.initLikelihoodTable(model.stateIndexer);
 				RootedPhylogeny phylo2 = new RootedPhylogeny(t2);
-				RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t0"), phylo1, phylo2, b1, b1, b1);
+				RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t0"), phylo1, phylo2, b1, b1, b1, false);
 				
 				double [][] likelihoodTable = calc.computeLikelihoodTable(phylo1, phylo2, b1, b1);
 				double logLik = calc.computeLoglik(likelihoodTable);

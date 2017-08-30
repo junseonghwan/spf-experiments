@@ -97,7 +97,6 @@ public class StreamingPropagator<S>
         options.resamplingScheme.getSortedCumulativeProbabilities(
             options.resamplingRandom, 
             options.numberOfConcreteParticles);
-    end = System.currentTimeMillis();
     List<S> samples = null;
     if (options.storeParticleWeights) {
     	samples = resampleWithWeights(
@@ -110,6 +109,7 @@ public class StreamingPropagator<S>
 	        sortedCumulativeProbabilitiesForFinalResampling,
 	        currentSmcIteration);
     }
+    end = System.currentTimeMillis();
     System.out.println("resampling_time=" + (end - start)/1000.0 + " seconds.");
     return new PropagationResult<>(population, samples);
   }

@@ -15,7 +15,7 @@ public class Taxon {
 	{
 		this.name = name;
 	}
-
+	
 	public Taxon(String name, String sequence)
 	{
 		this.name = name;

@@ -6,7 +6,6 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
-import java.util.Stack;
 
 import org.apache.commons.math3.util.Pair;
 import org.apache.commons.math3.util.Precision;
@@ -39,12 +38,34 @@ public class RootedPhylogeny
 	}
 
 	// two subtrees and the branch lengths from this node to the subtrees
-	public RootedPhylogeny(Taxon taxon, RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2, double height)
+	public RootedPhylogeny(Taxon taxon, RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2, double height, boolean copyTaxon)
 	{
 		this(taxon);
-		this.t1 = Pair.create(t1, b1);
-		this.t2 = Pair.create(t2, b2);
+		if (copyTaxon) {
+  		this.t1 = Pair.create(copy(t1), b1);
+  		this.t2 = Pair.create(copy(t2), b2);
+		} else {
+			this.t1 = Pair.create(t1, b1);
+  		this.t2 = Pair.create(t2, b2);
+		}
 		this.height = height;
+	}
+	
+	/**
+	 * Copy the tree, but do not copy the likelihood table stored in the Taxon
+	 * @param src
+	 * @return
+	 */
+	public static RootedPhylogeny copy(RootedPhylogeny src)
+	{
+		RootedPhylogeny copy = new RootedPhylogeny(new Taxon(src.taxon.getName()));
+		copy.t1 = src.t1;
+		copy.t2 = src.t2;
+		copy.height = src.height;
+		copy.treeString = src.treeString;
+		copy.dataString = src.treeString;
+		copy.logLik = src.logLik;
+		return copy;
 	}
 	
 	public boolean isLeaf()

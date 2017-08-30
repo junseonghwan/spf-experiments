@@ -19,11 +19,11 @@ import briefj.run.Results;
 public class ExpSPF implements Runnable
 {
 	@Option(required=false) public static Random random = new Random(1721);
-	@Option(required=false) public static double var = 2.3;
+	@Option(required=false) public static double var = 0.3;
 	@Option(required=false) public static double phi = 10.0;
 	@Option(required=false) public static double r = 44.7;
 	@Option(required=false) public static double N0 = 7.0;
-	@Option(required=false) public static int T = 100;
+	@Option(required=false) public static int T = 50;
 	@Option(required=false) public static int numConcreteParticles = 10000;
 	@Option(required=false) public static int maxVirtualParticles = 50000;
 	@Option(required=false) public static int numSimulations = 10;

@@ -21,10 +21,10 @@ implements Runnable
 {
 	@Option(required=false) public static Random random = new Random(721);
 	@Option(required=false) public static double phi = 10.0;
-	@Option(required=false) public static double r = 44.7;
+	@Option(required=false) public static double r = 44.70118;
 	@Option(required=false) public static double var = 0.3;
 	@Option(required=false) public static double N0 = 7.0;
-	@Option(required=false) public static int T = 10;
+	@Option(required=false) public static int T = 50;
 	@Option(required=false) public static int numConcreteParticles = 100;
 	@Option(required=false) public static int maxVirtualParticles = 1000;
 

@@ -43,7 +43,7 @@ public class Coalescent
 			// determine branch length for each of the subtrees to its parent
 			double b1 = height - t1.getHeight();
 			double b2 = height - t2.getHeight();
-			RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t" + id++), t1, t2, b1, b2, height);
+			RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t" + id++), t1, t2, b1, b2, height, false);
 			trees.add(parent);
 		}
 		

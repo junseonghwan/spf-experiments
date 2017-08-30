@@ -1,5 +1,6 @@
 package models;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -8,6 +9,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.distributions.Normal;
 import bayonet.distributions.Poisson;
+import briefj.BriefIO;
 
 public class RickerModel 
 {
@@ -23,6 +25,25 @@ public class RickerModel
 		}
 		
 		return data;
+	}
+	
+	public static Pair<List<Double>, List<Integer>> readFromFile(String path)
+	{
+		List<Double> Ns = new ArrayList<>();
+		List<Integer> ys = new ArrayList<>();
+		for (String line : BriefIO.readLines(new File(path)))
+		{
+			String [] row = line.split(",");
+			try {
+				int y = Integer.parseInt(row[0]);
+				double N = Double.parseDouble(row[1]);
+				Ns.add(N);
+				ys.add(y);
+			} catch (Exception ex) {
+				
+			}
+		}
+		return Pair.of(Ns, ys);
 	}
 	
 	/**
