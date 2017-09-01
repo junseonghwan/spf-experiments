@@ -9,6 +9,7 @@ import org.jblas.MatrixFunctions;
 import bayonet.distributions.Multinomial;
 import briefj.Indexer;
 import phylo.EvolutionaryModel;
+import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
 import phylo.Taxon;
 
@@ -34,7 +35,9 @@ public class GenerateSequences
 		
 		t1.getTaxon().setSequence(leftSequence);
 		t2.getTaxon().setSequence(rightSequence);
-		
+		//t1.setLogLikelihood(PhyloOptions.calc.computeLoglik(t1.getTaxon().getLikelihoodTable()));
+		//t2.setLogLikelihood(PhyloOptions.calc.computeLoglik(t2.getTaxon().getLikelihoodTable()));
+
 		if (!t1.isLeaf())
 		{
 			dataGenerationRecursion(random, model, t1);

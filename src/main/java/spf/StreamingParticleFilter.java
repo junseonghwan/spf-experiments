@@ -27,6 +27,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
   private double logZ = 0.0;
   private List<Double> nImplicitParticles;
   private List<Double> relESS;
+  private List<Double> logZs;
   private ParticleProcessor<P> processor;
 
   public StreamingParticleFilter(SMCProblemSpecification<P> problemSpec, SPFOptions options)
@@ -48,6 +49,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     // instantiate new arraylist each time
     nImplicitParticles = new ArrayList<>(nSMCIterations);
     relESS = new ArrayList<>();
+    logZs = new ArrayList<>();
     timeInSeconds = new ArrayList<>(nSMCIterations);
     long start = 0, end = 0;
 
@@ -58,6 +60,8 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     StreamingPropagator<P> propagator = new StreamingPropagator<P>(proposal, options);
     PropagationResult<P> propResults = propagator.execute(0);
     logZ = propResults.population.logZEstimate();
+    System.out.println("logZr=" + logZ);
+    logZs.add(logZ);
     end = System.currentTimeMillis();
     nImplicitParticles.add((double)propResults.population.getNumberOfParticles());
     relESS.add(propResults.population.ess()/options.numberOfConcreteParticles);
@@ -77,7 +81,10 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     	  proposal = new StreamingBootstrapProposal(options.mainRandom.nextLong(), propResults.getParticlePopulation());
       propagator = new StreamingPropagator<>(proposal, options);
       propResults = propagator.execute(i);
-      logZ += propResults.population.logZEstimate();
+      double logZr = propResults.population.logZEstimate();
+      logZ += logZr;
+      logZs.add(logZr);
+      System.out.println("logZr=" + logZr  + ", logZ=" + logZ);
       end = System.currentTimeMillis();
       nImplicitParticles.add((double)propResults.population.getNumberOfParticles());
       relESS.add(propResults.population.ess()/options.numberOfConcreteParticles);
@@ -89,6 +96,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     return propResults.getParticlePopulation();
   }
   
+  public List<Double> getLogZs() { return logZs; }
   public double logNormEstimate() { return logZ; }
   public List<Double> nImplicitParticles() { return nImplicitParticles; }
   public List<Double> relESS() { return relESS; }

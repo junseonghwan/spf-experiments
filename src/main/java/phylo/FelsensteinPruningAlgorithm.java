@@ -1,6 +1,5 @@
 package phylo;
 
-import briefj.BriefParallel;
 import phylo.models.DNAIndexer;
 
 public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterface
@@ -19,27 +18,14 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 
 		double [][] table1 = t1.getTaxon().getLikelihoodTable();
 		double [][] table2 = t2.getTaxon().getLikelihoodTable();
+		
+		//double [] pi = model.getStationaryDistribution();
 
 		int numSites = table1.length;
 		int numChars = table1[0].length;
 
 		double [][] likelihoodTable = new double[numSites][numChars];
 
-		/*
-		BriefParallel.process(numSites, 4, s -> {
-			for (int x = 0; x < numChars; x++)
-			{
-				double sum1 = 0.0;
-				double sum2 = 0.0;
-				for (int y = 0; y < numChars; y++)
-				{
-					sum1 += (transitionProbs1[x][y] * table1[s][y]);
-					sum2 += (transitionProbs2[x][y] * table2[s][y]);
-				}
-				likelihoodTable[s][x] = sum1 * sum2;
-			}			
-		});
-		*/
 		for (int s = 0; s < numSites; s++)
 		{
 			for (int x = 0; x < numChars; x++)

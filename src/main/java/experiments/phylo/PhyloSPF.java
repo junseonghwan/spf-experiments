@@ -2,7 +2,6 @@ package experiments.phylo;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -169,11 +168,18 @@ public class PhyloSPF implements Runnable
 		List<Double> heights = new ArrayList<>();
 		System.out.println("Begin processing the particle population. Size=" + N);
 		start = System.currentTimeMillis();
+		List<Double> logLiks = new ArrayList<>();
 		for (PartialCoalescentState particle : pop.particles)
 		{
 			processor.process(particle, 1.0/N);
+			// record the heights
 			heights.add(particle.getCoalescent().getHeight());
 
+			// compute the log likelihood
+			FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, particle.getCoalescent());
+			double logLik = PhyloOptions.calc.computeLoglik(particle.getCoalescent().getTaxon().getLikelihoodTable());
+			logLiks.add(logLik);
+			
 			// compute the distance between two species
 			/*
 			Counter<UnorderedPair<Taxon, Taxon>> distances = particle.getCoalescent().getPairwiseDistances(taxonIndexer);
@@ -214,12 +220,15 @@ public class PhyloSPF implements Runnable
 		// compute the likelihood of the data given the true tree: p(y | t, \theta)
 		System.out.println(phylogeny.getTreeString());
 		FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, phylogeny);
+		
+		// TODO: compute the true log-likelihood via sum-product algorithm
 		double logLik = PhyloOptions.calc.computeLoglik(phylogeny.getTaxon().getLikelihoodTable());
 		System.out.println("p(y|t): " + logLik);
 		System.out.println("truth: " + phylogeny.getHeight());
 		// get the estimate of the marginal log likelihood
 		double logZ = spf.logNormEstimate();
-		System.out.println("logZ:" + logZ);
+		double logZR = spf.getLogZs().get(leaves.size() - 2);
+		System.out.println("logZ:" + logZ + ", logZR:" + logZR);
 
 		String [] header = new String[numTaxa];
 		for (int i = 1; i <= numTaxa; i++) {
@@ -231,7 +240,8 @@ public class PhyloSPF implements Runnable
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-ess.csv"), spf.relESS());
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-heights.csv"), heights);
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-height-truth.csv"), new double[]{trueHeight});
-		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-logZ.csv"), new double[]{logZ});
+		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-logZ.csv"), new double[]{logZ, logZR});
+		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-particle-logZs.csv"), logLiks);
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-timing.csv"), new double[]{samplingTime, particleProcessingTime});
 		return spf.logNormEstimate();
 	}

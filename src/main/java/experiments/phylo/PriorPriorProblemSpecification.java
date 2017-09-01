@@ -19,22 +19,17 @@ public class PriorPriorProblemSpecification implements SMCProblemSpecification<P
 	}
 
 	@Override
-	public Pair<Double, PartialCoalescentState> proposeNext(int currentSmcIteration, Random random, PartialCoalescentState currentParticle) {
-		PartialCoalescentState newState = currentParticle.coalesce(random, false);
-		double logLik = newState.logLikelihood();
-		double prevStateLogLik = currentParticle.logLikelihood();
-		double w = logLik - prevStateLogLik;
-		return Pair.of(w, newState);
+	public Pair<Double, PartialCoalescentState> proposeNext(int currentSmcIteration, Random random, PartialCoalescentState currentParticle) 
+	{
+		Pair<Double, PartialCoalescentState> newState = currentParticle.coalesce(random, false);
+		return newState;
 	}
-	
+
 	@Override
 	public double proposeNextStream(int currentSmcIteration, Random random, PartialCoalescentState currentParticle) 
 	{
-		PartialCoalescentState newState = currentParticle.coalesce(random, true);
-		double logLik = newState.logLikelihood();
-		double prevStateLogLik = currentParticle.logLikelihood();
-		double w = logLik - prevStateLogLik;
-		return (w);
+		Pair<Double, PartialCoalescentState> newState = currentParticle.coalesce(random, true);
+		return newState.getLeft();
 	}
 
 	@Override

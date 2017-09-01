@@ -38,17 +38,24 @@ public class RootedPhylogeny
 	}
 
 	// two subtrees and the branch lengths from this node to the subtrees
-	public RootedPhylogeny(Taxon taxon, RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2, double height, boolean copyTaxon)
+	public RootedPhylogeny(Taxon taxon, RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2, double height, boolean discardChildrenLikelihoodTable)
 	{
 		this(taxon);
-		if (copyTaxon) {
-  		this.t1 = Pair.create(copy(t1), b1);
-  		this.t2 = Pair.create(copy(t2), b2);
+		this.height = height;
+		
+		if (discardChildrenLikelihoodTable) {
+			if (t1.isLeaf())
+				this.t1 = Pair.create(t1, b1);
+			else
+	  		this.t1 = Pair.create(copy(t1), b1);
+			if (t2.isLeaf())
+				this.t2 = Pair.create(t2, b2);
+			else
+				this.t2 = Pair.create(copy(t2), b2);
 		} else {
 			this.t1 = Pair.create(t1, b1);
   		this.t2 = Pair.create(t2, b2);
 		}
-		this.height = height;
 	}
 	
 	/**

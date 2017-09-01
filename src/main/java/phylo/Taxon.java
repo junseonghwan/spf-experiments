@@ -4,7 +4,8 @@ import org.jblas.DoubleMatrix;
 
 import briefj.Indexer;
 
-public class Taxon {
+public class Taxon 
+{
 	
 	private String name;
 	private String sequence; // *aligned
@@ -80,6 +81,12 @@ public class Taxon {
 	public int hashCode()
 	{
 		return this.name.hashCode();
+	}
+	
+	@Override
+	public boolean equals(Object other)
+	{
+		return this.hashCode() == other.hashCode();
 	}
 	
 	public static void main(String [] args)
