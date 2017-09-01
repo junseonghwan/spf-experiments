@@ -167,7 +167,9 @@ public class StreamingPropagator<S>
 	    	  
 	    	  //System.out.println(currentSmcIteration + ", " + j + ", " + logw);
 	      }
-	      if (result.size() > 0 && candidate != result.get(result.size()-1))
+	      if (result.size() == 0)
+	    	  numUnique += 1;
+	      else if (result.size() > 0 && candidate != result.get(result.size()-1))
 	    	  numUnique += 1;
 	      // we have found one particle that survived the collapse
 	      result.add(candidate);

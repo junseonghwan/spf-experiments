@@ -22,6 +22,9 @@ public class PriorPriorProblemSpecification implements SMCProblemSpecification<P
 	public Pair<Double, PartialCoalescentState> proposeNext(int currentSmcIteration, Random random, PartialCoalescentState currentParticle) 
 	{
 		Pair<Double, PartialCoalescentState> newState = currentParticle.coalesce(random, false);
+		System.out.println("logw: " + newState.getLeft());
+		System.out.println("loglik: " + newState.getRight().logLikelihood());
+		System.out.println(newState.getRight().toString());
 		return newState;
 	}
 

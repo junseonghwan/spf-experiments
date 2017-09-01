@@ -1,6 +1,6 @@
 rm(list=ls())
 method_type<-"spf"
-dir1k<-paste("~/Dropbox/Research/repo/spf-experiments/output/test/", sep="")
+dir1k<-paste("~/Dropbox/Research/repo/spf-experiments/output/test2/", sep="")
 numSimul<-50
 sum1k <- rep(0, numSimul)
 quan1k<-rep(0, numSimul)
@@ -20,11 +20,11 @@ for (i in 1:numSimul)
   abline(v=q1k, col='black')
   sum1k[i] <- (truth$V1 >= q1k[1] & truth$V1 <= q1k[2])
   quan1k[i]<-mean(d1k$V1 < truth$V1)
-  
+
   trueDistMatrix<-read.csv(paste(dir1k, "output", i, "/phylo-pairwise-dist-truth-spf.csv", sep=""), header=T)
   distMatrix<-read.csv(paste(dir1k, "output", i, "/phylo-pairwise-dist-spf.csv", sep=""), header=T)
-  plot(hclust(dist(trueDistMatrix/2)), main="true tree")
-  plot(hclust(dist(distMatrix/2)), main="mean tree")
+  plot(hclust(as.dist(trueDistMatrix/2)), main="true tree")
+  plot(hclust(as.dist(distMatrix/2)), main="mean tree")
   diff<-trueDistMatrix - distMatrix
   dd[i]<-sum(diff[upper.tri(trueDistMatrix)]^2)
   #plot(density(diff[upper.tri(trueDistMatrix)]))

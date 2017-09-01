@@ -14,6 +14,7 @@ import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
 import phylo.RootedPhylogenyProcessor;
 import phylo.Taxon;
+import phylo.RootedPhylogeny.PostorderObject;
 import phylo.models.Coalescent;
 import phylo.models.GTRModel;
 import phylo.models.GenerateSequences;
@@ -23,6 +24,7 @@ import spf.SPFOptions;
 import spf.StreamingParticleFilter;
 import util.OutputHelper;
 import bayonet.smc.ParticlePopulation;
+import briefj.BriefIO;
 import briefj.Indexer;
 import briefj.collections.Counter;
 import briefj.collections.UnorderedPair;
@@ -54,6 +56,8 @@ public class PhyloSPF implements Runnable
 	public static Set<Integer> simulationSet = new HashSet<>();
 	private Indexer<Taxon> taxonIndexer = new Indexer<Taxon>();
 	private List<Taxon> leaves = new ArrayList<Taxon>();
+
+	public static String data_path = "output/DNA_data.txt";
 	/*
     public static CTMCExpFam<String> model = CTMCExpFam.createModelWithFullSupport(Indexers.dnaIndexer(), true);
     static {
@@ -63,8 +67,7 @@ public class PhyloSPF implements Runnable
     */
 	
 	static {
-		//int [] simulationNo = new int[]{4, 7, 10, 18, 21, 24, 33, 36, 38, 39};
-		int [] simulationNo = new int[]{};
+		int [] simulationNo = new int[]{12,22,25,29,32};
 		for (int i : simulationNo)
 		{
 			simulationSet.add(i);
@@ -74,27 +77,38 @@ public class PhyloSPF implements Runnable
 	@Override
 	public void run() 
 	{
-		for (int n = 0; n < numTaxa; n++)
-		{
-			Taxon T = new Taxon("T" + n);
-			leaves.add(T);
-			taxonIndexer.addToIndex(T);
-		}
+		if (data_path != null) {
+			int n = 0;
+			for (String line : BriefIO.readLines(new File(data_path)))
+			{
+				Taxon T = new Taxon("T" + n++);
+				T.setSequence(line.trim());
+				leaves.add(T);
+				taxonIndexer.addToIndex(T);
+			}
+			simulation(new Random(rand.nextLong()), 1, false);
+		} else {
+			for (int n = 0; n < numTaxa; n++)
+			{
+				Taxon T = new Taxon("T" + n);
+				leaves.add(T);
+				taxonIndexer.addToIndex(T);
+			}
 
-		//List<Double> logZ = new ArrayList<>();
-		//BriefParallel.process(numSimulations, 4, i -> { System.out.println("Simulation : " + i); simulation(new Random(rand.nextLong()), i);});
-		for (int i = 0; i < numSimulations; i++)
-		{
-			System.out.println("Simulation: " + (i+1));
-			Random random = new Random(rand.nextLong());
-			if (simulationSet.size() == 0)
-				simulation(random, i+1);
-			else if (simulationSet.size() > 0 && simulationSet.contains(i+1))
-				simulation(random, i+1);
+
+			for (int i = 0; i < numSimulations; i++)
+			{
+				System.out.println("Simulation: " + (i+1));
+				Random random = new Random(rand.nextLong());
+				if (simulationSet.size() == 0)
+					simulation(random, i+1, true);
+				else if (simulationSet.size() > 0 && simulationSet.contains(i+1))
+					simulation(random, i+1, true);
+			}
 		}
 	}
 	
-	private double simulation(Random random, int simulNo)
+	private double simulation(Random random, int simulNo, boolean generateData)
 	{
 		// simulate a tree and generate the data
 		/*
@@ -116,7 +130,7 @@ public class PhyloSPF implements Runnable
 		LikelihoodCalculatorExpFam calc = new LikelihoodCalculatorExpFam(model, learnedModel);
 		*/
 
-		EvolutionaryModel model = new JukesCantor(0.005);
+		EvolutionaryModel model = new JukesCantor(1.0);
 		/*
 		double [] pi = new double[]{0.3,0.2,0.2,0.3};
 		//GTRModelParams gtrParams = new GTRModelParams(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble());
@@ -128,9 +142,12 @@ public class PhyloSPF implements Runnable
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
 
 		// generate the data and the tree
-		RootedPhylogeny phylogeny = Coalescent.sampleFromCoalescent(random, leaves);
-		//GenerateSequenceDataFromExpFam.generateSequencesCTMC(random, model, learnedModel, phylogeny, numSites);
-		GenerateSequences.generateSequencesFromModel(random, model, phylogeny, numSites);
+		RootedPhylogeny phylogeny = null;
+		if (generateData) {
+			phylogeny = Coalescent.sampleFromCoalescent(random, leaves);
+			//GenerateSequenceDataFromExpFam.generateSequencesCTMC(random, model, learnedModel, phylogeny, numSites);
+			GenerateSequences.generateSequencesFromModel(random, model, phylogeny, numSites);
+		}
 
 		SPFOptions options = new SPFOptions();
 		options.maxNumberOfVirtualParticles = maxVirtualParticles;
@@ -150,99 +167,126 @@ public class PhyloSPF implements Runnable
 		System.out.println("Sampling time=" + samplingTime);
 
 		// process the population
-		double [][] dd = new double[numTaxa][numTaxa];
-		double [][] trueDistances = new double[numTaxa][numTaxa];
-		Counter<UnorderedPair<Taxon, Taxon>> truth = phylogeny.getPairwiseDistances(taxonIndexer);
-		double trueHeight = phylogeny.getHeight();
-		for (UnorderedPair<Taxon, Taxon> pair : truth)
-		{
-			int i = taxonIndexer.o2i(pair.getFirst());
-			int j = taxonIndexer.o2i(pair.getSecond());
-			double dist = truth.getCount(pair);
-			trueDistances[i][j] = dist;
-			trueDistances[j][i] = dist;
-		}
-
-		RootedPhylogenyProcessor processor = new RootedPhylogenyProcessor(phylogeny, taxonIndexer);
-		int N = pop.particles.size();
-		List<Double> heights = new ArrayList<>();
-		System.out.println("Begin processing the particle population. Size=" + N);
-		start = System.currentTimeMillis();
-		List<Double> logLiks = new ArrayList<>();
-		for (PartialCoalescentState particle : pop.particles)
-		{
-			processor.process(particle, 1.0/N);
-			// record the heights
-			heights.add(particle.getCoalescent().getHeight());
-
-			// compute the log likelihood
-			FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, particle.getCoalescent());
-			double logLik = PhyloOptions.calc.computeLoglik(particle.getCoalescent().getTaxon().getLikelihoodTable());
-			logLiks.add(logLik);
-			
-			// compute the distance between two species
-			/*
-			Counter<UnorderedPair<Taxon, Taxon>> distances = particle.getCoalescent().getPairwiseDistances(taxonIndexer);
-			double h = particle.getCoalescent().getHeight();
-			//System.out.println(h);
-			heights.add(h);
-			for (UnorderedPair<Taxon, Taxon> pair : distances)
+		if (phylogeny != null) {
+			double [][] dd = new double[numTaxa][numTaxa];
+			double [][] trueDistances = new double[numTaxa][numTaxa];
+			Counter<UnorderedPair<Taxon, Taxon>> truth = phylogeny.getPairwiseDistances(taxonIndexer);
+			double trueHeight = phylogeny.getHeight();
+			for (UnorderedPair<Taxon, Taxon> pair : truth)
 			{
 				int i = taxonIndexer.o2i(pair.getFirst());
 				int j = taxonIndexer.o2i(pair.getSecond());
-				double dist = distances.getCount(pair);
-				dd[i][j] += dist;
-				dd[j][i] += dist;
+				double dist = truth.getCount(pair);
+				trueDistances[i][j] = dist;
+				trueDistances[j][i] = dist;
+			}
+	
+			RootedPhylogenyProcessor processor = new RootedPhylogenyProcessor(phylogeny, taxonIndexer);
+			int N = pop.particles.size();
+			List<Double> heights = new ArrayList<>();
+			System.out.println("Begin processing the particle population. Size=" + N);
+			start = System.currentTimeMillis();
+			List<Double> logLiks = new ArrayList<>();
+			for (PartialCoalescentState particle : pop.particles)
+			{
+				processor.process(particle, 1.0/N);
+				// record the heights
+				heights.add(particle.getCoalescent().getHeight());
+	
+				// compute the log likelihood
+				FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, particle.getCoalescent());
+				double logLik = PhyloOptions.calc.computeLoglik(particle.getCoalescent().getTaxon().getLikelihoodTable());
+				logLiks.add(logLik);
+				
+				// compute the distance between two species
+				/*
+				Counter<UnorderedPair<Taxon, Taxon>> distances = particle.getCoalescent().getPairwiseDistances(taxonIndexer);
+				double h = particle.getCoalescent().getHeight();
+				//System.out.println(h);
+				heights.add(h);
+				for (UnorderedPair<Taxon, Taxon> pair : distances)
+				{
+					int i = taxonIndexer.o2i(pair.getFirst());
+					int j = taxonIndexer.o2i(pair.getSecond());
+					double dist = distances.getCount(pair);
+					dd[i][j] += dist;
+					dd[j][i] += dist;
+				}
+				*/
+			}
+			/*
+			for (int i = 0; i < numTaxa; i++)
+			{
+				for (int j = 0; j < numTaxa; j++)
+				{
+					dd[i][j] /= pop.particles.size();
+				}
 			}
 			*/
-		}
-		/*
-		for (int i = 0; i < numTaxa; i++)
-		{
-			for (int j = 0; j < numTaxa; j++)
+			Counter<UnorderedPair<Taxon, Taxon>> dist = processor.getMeanDistances();
+			for (UnorderedPair<Taxon, Taxon> key : dist.keySet())
 			{
-				dd[i][j] /= pop.particles.size();
+				int i = taxonIndexer.o2i(key.getFirst());
+				int j = taxonIndexer.o2i(key.getSecond());
+				dd[i][j] = dist.getCount(key);
+				dd[j][i] = dd[i][j];
 			}
-		}
-		*/
-		Counter<UnorderedPair<Taxon, Taxon>> dist = processor.getMeanDistances();
-		for (UnorderedPair<Taxon, Taxon> key : dist.keySet())
-		{
-			int i = taxonIndexer.o2i(key.getFirst());
-			int j = taxonIndexer.o2i(key.getSecond());
-			dd[i][j] = dist.getCount(key);
-			dd[j][i] = dd[i][j];
-		}
-		end = System.currentTimeMillis();
-		double particleProcessingTime = (end - start)/1000.0;
-		System.out.println("Processing time=" + particleProcessingTime);
+			end = System.currentTimeMillis();
+			double particleProcessingTime = (end - start)/1000.0;
+			System.out.println("Processing time=" + particleProcessingTime);
+	
+			// compute the likelihood of the data given the true tree: p(y | t, \theta)
+			System.out.println(phylogeny.getTreeString());
+			FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, phylogeny);
+			
+			// TODO: compute the true log-likelihood via sum-product algorithm
+			double logLik = PhyloOptions.calc.computeLoglik(phylogeny.getTaxon().getLikelihoodTable());
+			System.out.println("p(y|t): " + logLik);
+			System.out.println("truth: " + phylogeny.getHeight());
+			// get the estimate of the marginal log likelihood
+			double logZ = spf.logNormEstimate();
+			double logZR = spf.getLogZs().get(leaves.size() - 2);
+			System.out.println("logZ:" + logZ + ", logZR:" + logZR);
+	
+			String [] header = new String[numTaxa];
+			for (int i = 0; i < numTaxa; i++) {
+				header[i] = "T" + i;
+			}
+			System.out.println(phylogeny.getNewickFormat());
+			System.out.println(phylogeny.getDataString());
+	
+			File resultsDir = Results.getResultFolder();
+			OutputHelper.writeTableAsCSV(new File(resultsDir, "output" + simulNo + "/phylo-pairwise-dist-spf.csv"), header, dd);
+			OutputHelper.writeTableAsCSV(new File(resultsDir, "output" + simulNo + "/phylo-pairwise-dist-truth-spf.csv"), header, trueDistances);
+			OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-ess.csv"), spf.relESS());
+			OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-heights.csv"), heights);
+			OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-height-truth.csv"), new double[]{trueHeight});
+			OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-logZ.csv"), new double[]{logLik, logZR, logZ});
+			OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-particle-logZs.csv"), logLiks);
+			OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-timing.csv"), new double[]{samplingTime, particleProcessingTime});
+		} else {
+			// just get the heights and the logZ
+			List<Double> heights = new ArrayList<>();
+			int N = pop.particles.size();
+			System.out.println("Begin processing the particle population. Size=" + N);
+			List<Double> logLiks = new ArrayList<>();
+			for (PartialCoalescentState particle : pop.particles)
+			{
+				// record the heights
+				heights.add(particle.getCoalescent().getHeight());
+	
+				// compute the log likelihood
+				FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, particle.getCoalescent());
+				double logLik = PhyloOptions.calc.computeLoglik(particle.getCoalescent().getTaxon().getLikelihoodTable());
+				logLiks.add(logLik);
+			}
+			double logZ = spf.logNormEstimate();
+			double logZR = spf.getLogZs().get(leaves.size() - 2);
+			File resultsDir = Results.getResultFolder();
+			OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-heights.csv"), heights);
+			OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-logZ.csv"), new double[]{logZR, logZ});
 
-		// compute the likelihood of the data given the true tree: p(y | t, \theta)
-		System.out.println(phylogeny.getTreeString());
-		FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, phylogeny);
-		
-		// TODO: compute the true log-likelihood via sum-product algorithm
-		double logLik = PhyloOptions.calc.computeLoglik(phylogeny.getTaxon().getLikelihoodTable());
-		System.out.println("p(y|t): " + logLik);
-		System.out.println("truth: " + phylogeny.getHeight());
-		// get the estimate of the marginal log likelihood
-		double logZ = spf.logNormEstimate();
-		double logZR = spf.getLogZs().get(leaves.size() - 2);
-		System.out.println("logZ:" + logZ + ", logZR:" + logZR);
-
-		String [] header = new String[numTaxa];
-		for (int i = 1; i <= numTaxa; i++) {
-			header[i-1] = "T" + i;
 		}
-		File resultsDir = Results.getResultFolder();
-		OutputHelper.writeTableAsCSV(new File(resultsDir, "output" + simulNo + "/phylo-pairwise-dist-spf.csv"), header, dd);
-		OutputHelper.writeTableAsCSV(new File(resultsDir, "output" + simulNo + "/phylo-pairwise-dist-truth-spf.csv"), header, trueDistances);		
-		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-ess.csv"), spf.relESS());
-		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-heights.csv"), heights);
-		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-height-truth.csv"), new double[]{trueHeight});
-		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-logZ.csv"), new double[]{logZ, logZR});
-		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-particle-logZs.csv"), logLiks);
-		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-spf-timing.csv"), new double[]{samplingTime, particleProcessingTime});
 		return spf.logNormEstimate();
 	}
 

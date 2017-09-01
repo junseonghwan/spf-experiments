@@ -72,24 +72,24 @@ public class PartialCoalescentState {
 		double b1 = newState.height - t1.getHeight();
 		double b2 = newState.height - t2.getHeight();
 		
-		RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t" + newState.id++), t1, t2, b1, b2, newState.height, true);
-		newState.trees.add(parent);
-
 		// compute the likelihood
-		double logLik = 0.0;
+		double logw = 0.0;
 		if (isPeek) {
-			logLik = PhyloOptions.calc.computeLoglikInStream(t1, t2, b1, b2);
+			logw = PhyloOptions.calc.computeLoglikInStream(t1, t2, b1, b2);
 		} else {
+			RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t" + newState.id++), t1, t2, b1, b2, newState.height, true);
+			newState.trees.add(parent);
+
 			double [][] likelihoodTable = PhyloOptions.calc.computeLikelihoodTable(t1, t2, b1, b2);
 			parent.getTaxon().setLikelihoodTable(likelihoodTable);
-			logLik = PhyloOptions.calc.computeLoglik(likelihoodTable);
+			logw = PhyloOptions.calc.computeLoglik(likelihoodTable);
+			parent.setLogLikelihood(logw + t1.logLikelihood() + t2.logLikelihood()); // this is the likelihood for the tree
 		}
-		parent.setLogLikelihood(logLik);
 
 		//System.out.println(newState.trees.size() + ", " + t1.getTaxon().toString() + ", " + t2.getTaxon().toString() + ", " + branchLength + ", " + newState.height + ", " + logLik);
 
 		//return Pair.of(logLik + t1.logLikelihood() + t2.logLikelihood(), newState);
-		return Pair.of(logLik, newState);
+		return Pair.of(logw, newState); // returns the weight
 	}
 	
 	public Pair<Double, PartialCoalescentState> priorPost(Random random, boolean isPeek)
@@ -176,15 +176,13 @@ public class PartialCoalescentState {
 	@Override
 	public String toString()
 	{
-		/*
 		StringBuilder sb = new StringBuilder();
+		sb.append(height + "\n");
 		for (RootedPhylogeny tree : trees)
 		{
 			sb.append(tree.getTreeString());
 		}
 		return sb.toString();
-		*/
-		return height + "";
 	}
 	
 	public static void main(String [] args)

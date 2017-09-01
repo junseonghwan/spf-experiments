@@ -91,11 +91,11 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 		int numSites = table1.length;
 		int numChars = table1[0].length;
 
-		double logLik = 0.0;
+		double logRatio = 0.0;
 
 		for (int s = 0; s < numSites; s++)
 		{
-			double sum = 0.0;
+			double C = 0.0;
 			for (int x = 0; x < numChars; x++)
 			{
 				double sum1 = 0.0;
@@ -105,11 +105,11 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 					sum1 += (transitionProbs1[x][y] * table1[s][y]);
 					sum2 += (transitionProbs2[x][y] * table2[s][y]);
 				}
-				sum += pi[x] * sum1 * sum2;
+				C += pi[x] * sum1 * sum2;
 			}
-			logLik += Math.log(sum);
+			logRatio += Math.log(C);
 		}
 		
-		return logLik;
+		return logRatio;
 	}
 }

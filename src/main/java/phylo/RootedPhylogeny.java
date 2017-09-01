@@ -42,7 +42,9 @@ public class RootedPhylogeny
 	{
 		this(taxon);
 		this.height = height;
-		
+		this.t1 = Pair.create(t1, b1);
+		this.t2 = Pair.create(t2, b2);
+		/*
 		if (discardChildrenLikelihoodTable) {
 			if (t1.isLeaf())
 				this.t1 = Pair.create(t1, b1);
@@ -54,8 +56,9 @@ public class RootedPhylogeny
 				this.t2 = Pair.create(copy(t2), b2);
 		} else {
 			this.t1 = Pair.create(t1, b1);
-  		this.t2 = Pair.create(t2, b2);
+			this.t2 = Pair.create(t2, b2);
 		}
+		*/
 	}
 	
 	/**
