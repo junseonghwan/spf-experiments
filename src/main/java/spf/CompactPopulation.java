@@ -45,7 +45,7 @@ public class CompactPopulation
     nParticles++;
     logSum          = NumericalUtils.logAdd(logSum,              logWeight);
     logSumOfSquares = NumericalUtils.logAdd(logSumOfSquares, 2 * logWeight);
-    //System.out.println("111," + logWeight + ", " + logSum);
+    //System.out.println("logw: " + logWeight + ", " + logSum);
     
     if (storeWeights) {
     	logWeights.add(logWeight);

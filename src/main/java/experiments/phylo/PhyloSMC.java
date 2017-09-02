@@ -10,6 +10,7 @@ import phylo.FelsensteinPruningAlgorithm;
 import phylo.PartialCoalescentState;
 import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
+import phylo.RootedPhylogenyProcessor;
 import phylo.Taxon;
 import phylo.models.Coalescent;
 import phylo.models.GenerateSequences;
@@ -18,7 +19,6 @@ import simplesmc.SMCAlgorithm;
 import simplesmc.SMCOptions;
 import util.OutputHelper;
 import bayonet.smc.ParticlePopulation;
-import briefj.BriefParallel;
 import briefj.Indexer;
 import briefj.collections.Counter;
 import briefj.collections.UnorderedPair;
@@ -38,8 +38,6 @@ public class PhyloSMC implements Runnable
 	public int numTaxa = 4;
 	@Option(required=true)
 	public int numSimulations = 100;
-	@Option(required=true)
-	public double mutationRate = 0.7;
 
 	private Indexer<Taxon> taxonIndexer = new Indexer<Taxon>();
 	private List<Taxon> leaves = new ArrayList<Taxon>();
@@ -54,7 +52,10 @@ public class PhyloSMC implements Runnable
 			taxonIndexer.addToIndex(T);
 		}
 
-		BriefParallel.process(numSimulations, 4, i -> {simulation(new Random(rand.nextLong()), i+1);});
+		for (int i = 0; i < numSimulations; i++)
+		{
+			simulation(new Random(rand.nextLong()), i+1);			
+		}
 	}
 
 	public double simulation(Random random, int simulNo)
@@ -83,22 +84,24 @@ public class PhyloSMC implements Runnable
 		LikelihoodCalculatorExpFam calc = new LikelihoodCalculatorExpFam(model, learnedModel);
 		*/
 
-		EvolutionaryModel model = new JukesCantor(mutationRate);
+		EvolutionaryModel model = new JukesCantor(0.05);
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
 
 		// generate the data and the tree
 		RootedPhylogeny phylogeny = Coalescent.sampleFromCoalescent(random, leaves);
-		//GenerateSequenceDataFromExpFam.generateSequencesCTMC(random, model, learnedModel, phylogeny, numSites);
 		GenerateSequences.generateSequencesFromModel(random, model, phylogeny, numSites);
 
 		SMCOptions options = new SMCOptions();
 		options.nParticles = numParticles;
-		options.verbose = false;
+		options.verbose = true;
 		options.random = new Random(random.nextLong());
 		PriorPriorProblemSpecification proposal = new PriorPriorProblemSpecification(leaves);
 		SMCAlgorithm<PartialCoalescentState> smc = new SMCAlgorithm<>(proposal, options);
+		long start = System.currentTimeMillis();
 		ParticlePopulation<PartialCoalescentState> pop = smc.sample();
-		System.out.println(smc.logNormEstimate());
+		long end = System.currentTimeMillis();
+		double samplingTime = (end - start)/1000.0;
+		double logZ = smc.logNormEstimate();
 
 		// process the particles
 		double [][] dd = new double[numTaxa][numTaxa];
@@ -114,39 +117,50 @@ public class PhyloSMC implements Runnable
 			trueDistances[j][i] = dist;
 		}
 
+		RootedPhylogenyProcessor processor = new RootedPhylogenyProcessor(phylogeny, taxonIndexer);
+		int N = pop.particles.size();
 		List<Double> heights = new ArrayList<>();
 		List<Double> weights = new ArrayList<>();
+		System.out.println("Begin processing the particle population. Size=" + N);
+		start = System.currentTimeMillis();
+		List<Double> logLiks = new ArrayList<>();
+
 		for (int l = 0; l < pop.particles.size(); l++)
 		{
-			PartialCoalescentState particle = pop.particles.get(l);
+			PartialCoalescentState state = pop.particles.get(l);
 			double ww = pop.getNormalizedWeight(l);
-			/*
-			System.out.println(particle.toString());
-			System.out.println(ww);
-			*/
+			processor.process(state, ww);
 			weights.add(ww);
-			// compute the distance between two species, normalized by the height
-			Counter<UnorderedPair<Taxon, Taxon>> distances = particle.getCoalescent().getPairwiseDistances(taxonIndexer);
-			double h = particle.getCoalescent().getHeight();
-			heights.add(h);
-			for (UnorderedPair<Taxon, Taxon> pair : distances)
-			{
-				int i = taxonIndexer.o2i(pair.getFirst());
-				int j = taxonIndexer.o2i(pair.getSecond());
-				double dist = distances.getCount(pair);
-				dd[i][j] += ww*dist;
-				dd[j][i] += ww*dist;
-			}
+			heights.add(state.getCoalescent().getHeight());
+
+			// compute the log likelihood
+			FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, state.getCoalescent());
+			double logLik = PhyloOptions.calc.computeLoglik(state.getCoalescent().getTaxon().getLikelihoodTable());
+			logLiks.add(logLik);
 		}
-		
+		Counter<UnorderedPair<Taxon, Taxon>> dist = processor.getMeanDistances();
+		for (UnorderedPair<Taxon, Taxon> key : dist.keySet())
+		{
+			int i = taxonIndexer.o2i(key.getFirst());
+			int j = taxonIndexer.o2i(key.getSecond());
+			dd[i][j] = dist.getCount(key);
+			dd[j][i] = dd[i][j];
+		}
+
+		end = System.currentTimeMillis();
+		double particleProcessingTime = (end - start)/1000.0;
+
 		// compute the likelihood of the data given the true tree: p(y | t, \theta)
 		System.out.println(phylogeny.getTreeString());
 		FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, phylogeny);
-		System.out.println(PhyloOptions.calc.computeLoglik(phylogeny.getTaxon().getLikelihoodTable()));
+		double dataLogLik = PhyloOptions.calc.computeLoglik(phylogeny.getTaxon().getLikelihoodTable());
+		System.out.println("p(y|t)=" + dataLogLik);
+		double logZR = smc.getLogNorms().get(leaves.size() - 2);
 
 		System.out.println("truth: " + phylogeny.getHeight());
 		String [] header = new String[numTaxa];
-		for (int i = 1; i <= numTaxa; i++) {
+		for (int i = 1; i <= numTaxa; i++) 
+		{
 			header[i-1] = "T" + i;
 		}
 		File resultsDir = Results.getResultFolder();
@@ -156,7 +170,9 @@ public class PhyloSMC implements Runnable
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-smc-heights.csv"), heights);
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-smc-weights.csv"), weights);
 		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-smc-height-truth.csv"), new double[]{trueHeight});
-
+		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-smc-logZ.csv"), new double[]{dataLogLik, logZR, logZ});
+		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-smc-particle-logZs.csv"), logLiks);
+		OutputHelper.writeVector(new File(resultsDir, "output" + simulNo + "/phylo-smc-timing.csv"), new double[]{samplingTime, particleProcessingTime});
 		return smc.logNormEstimate();
 	}
 

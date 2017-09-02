@@ -36,6 +36,7 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
   private final Random[] randoms;
   
   private List<Double> effectiveSampleSize;
+  private List<Double> logZs;
   
   private ParticleProcessor<P> processor = null;
   
@@ -48,29 +49,38 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
   {
     int nSMCIterations = proposal.nIterations();
     
+    System.out.println("Iter 1");
     timeInSeconds = new ArrayList<>(nSMCIterations); 
     effectiveSampleSize = new ArrayList<>(nSMCIterations);
+    logZs = new ArrayList<>(nSMCIterations);
     long start = System.currentTimeMillis();
     ParticlePopulation<P> currentPopulation = propose(null, 0);
     effectiveSampleSize.add(currentPopulation.getESS());
+    logZs.add(currentPopulation.logNormEstimate());
     if (currentPopulation.getRelativeESS() < options.essThreshold)
   	  currentPopulation = currentPopulation.resample(options.random, options.resamplingScheme);
     long end = System.currentTimeMillis();
-    timeInSeconds.add((end-start)/1000.0);
+    double samplingTime = (end-start)/1000.0;
+    timeInSeconds.add(samplingTime);
+	System.out.println("Sampling time: " + samplingTime + ", ESS: " + effectiveSampleSize.get(0));
     if (processor != null)
   	  processor.process(0, currentPopulation);
     
     for (int currentIteration = 1; currentIteration < nSMCIterations; currentIteration++)
     {
-      start = System.currentTimeMillis();
-      currentPopulation = propose(currentPopulation, currentIteration);
-      effectiveSampleSize.add(currentPopulation.getESS());
-      if (currentPopulation.getRelativeESS() < options.essThreshold && currentIteration < nSMCIterations - 1)
-    	  currentPopulation = currentPopulation.resample(options.random, options.resamplingScheme);
-      end = System.currentTimeMillis();
-      timeInSeconds.add((end-start)/1000.0);
-      if (processor != null)
-    	  processor.process(currentIteration, currentPopulation);
+    	System.out.println("Iter " + (currentIteration + 1));
+    	start = System.currentTimeMillis();
+    	currentPopulation = propose(currentPopulation, currentIteration);
+    	effectiveSampleSize.add(currentPopulation.getESS());
+    	logZs.add(currentPopulation.logNormEstimate());
+    	if (currentPopulation.getRelativeESS() < options.essThreshold && currentIteration < nSMCIterations - 1)
+    		currentPopulation = currentPopulation.resample(options.random, options.resamplingScheme);
+    	end = System.currentTimeMillis();
+    	samplingTime = (end-start)/1000.0;
+    	timeInSeconds.add(samplingTime);
+    	System.out.println("Sampling time: " + samplingTime + ", ESS: " + effectiveSampleSize.get(currentIteration));
+    	if (processor != null)
+    		processor.process(currentIteration, currentPopulation);
     }
 
     logZEstimate = currentPopulation.logNormEstimate();
@@ -78,6 +88,7 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
   }
   
   public double logNormEstimate() { return logZEstimate; }
+  public List<Double> getLogNorms() { return logZs; }
   
   /**
    * Calls the proposal options.nParticles times, form the new weights, and return the new population.

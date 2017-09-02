@@ -14,12 +14,9 @@ import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
 import phylo.RootedPhylogenyProcessor;
 import phylo.Taxon;
-import phylo.RootedPhylogeny.PostorderObject;
 import phylo.models.Coalescent;
-import phylo.models.GTRModel;
 import phylo.models.GenerateSequences;
 import phylo.models.JukesCantor;
-import phylo.models.GTRModel.GTRModelParams;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
 import util.OutputHelper;
@@ -48,16 +45,13 @@ public class PhyloSPF implements Runnable
 	public int numTaxa = 4;
 	@Option(required=true)
 	public int numSimulations = 20;
-	/*
-	@Option(required=true)
-	public double mutationRate = 1.2;
-	*/
 
 	public static Set<Integer> simulationSet = new HashSet<>();
 	private Indexer<Taxon> taxonIndexer = new Indexer<Taxon>();
 	private List<Taxon> leaves = new ArrayList<Taxon>();
 
-	public static String data_path = "output/DNA_data.txt";
+	//public static String data_path = "output/DNA_data.txt";
+	public static String data_path = null;
 	/*
     public static CTMCExpFam<String> model = CTMCExpFam.createModelWithFullSupport(Indexers.dnaIndexer(), true);
     static {
@@ -67,7 +61,7 @@ public class PhyloSPF implements Runnable
     */
 	
 	static {
-		int [] simulationNo = new int[]{12,22,25,29,32};
+		int [] simulationNo = new int[]{};
 		for (int i : simulationNo)
 		{
 			simulationSet.add(i);
