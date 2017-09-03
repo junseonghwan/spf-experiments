@@ -1,5 +1,8 @@
 package phylo;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.commons.math3.util.Pair;
 
 import briefj.Indexer;
@@ -27,18 +30,24 @@ public class RootedPhylogenyProcessor
 	private Indexer<Taxon> taxonIndexer;
 	
 	private double meanHeight = 0.0;;
-	
+	private List<Double> heights = new ArrayList<>();
+	private List<Double> weights = new ArrayList<>();
+
+	double [][] dd = null;
+	Counter<UnorderedPair<Taxon, Taxon>> meanPairwiseDistances = new Counter<UnorderedPair<Taxon,Taxon>>();
+
 	public RootedPhylogenyProcessor(RootedPhylogeny truePhylogeny, Indexer<Taxon> taxonIndexer)
 	{
 		this.taxonIndexer = taxonIndexer;
 		//this.truePhylogeny = truePhylogeny;
 		this.pm = new PartitionMetric(truePhylogeny);
 	}
-	
-	Counter<UnorderedPair<Taxon, Taxon>> meanDistances = new Counter<UnorderedPair<Taxon,Taxon>>();
-  public void process(PartialCoalescentState state, double weight) 
+
+	public void process(PartialCoalescentState state, double weight) 
 	{
 		double height = state.getCoalescent().getHeight();
+		heights.add(height);
+		weights.add(weight);
 		//LogInfo.logs(height);
 		meanHeight += weight*height;
 		
@@ -65,9 +74,12 @@ public class RootedPhylogenyProcessor
 		Counter<UnorderedPair<Taxon, Taxon>> pairwise = state.getCoalescent().getPairwiseDistances(taxonIndexer);
 		for (UnorderedPair<Taxon, Taxon> pair : pairwise.keySet())
 		{
-			meanDistances.incrementCount(pair, pairwise.getCount(pair)*weight);
+			meanPairwiseDistances.incrementCount(pair, pairwise.getCount(pair)*weight);
 		}
-  }
+	}
+	
+	public List<Double> getHeights() { return heights; }
+	public List<Double> getWeights() { return weights; }
 	
 	public int getNumSamples()
 	{
@@ -79,9 +91,29 @@ public class RootedPhylogenyProcessor
 		return normalizer;
 	}
 	
-	public Counter<UnorderedPair<Taxon, Taxon>> getMeanDistances()
+	public Counter<UnorderedPair<Taxon, Taxon>> getMeanPairwiseDistances()
 	{
-		return meanDistances;
+		return meanPairwiseDistances;
+	}
+	
+	private void constructMeanPairwiseDistancesAsArray()
+	{
+		int nTaxa = taxonIndexer.size();
+		dd = new double[nTaxa][nTaxa];
+		for (UnorderedPair<Taxon, Taxon> key : meanPairwiseDistances.keySet())
+		{
+			int i = taxonIndexer.o2i(key.getFirst());
+			int j = taxonIndexer.o2i(key.getSecond());
+			dd[i][j] = meanPairwiseDistances.getCount(key);
+			dd[j][i] = dd[i][j];
+		}
+	}
+	
+	public double [][] getMeanPairwiseDistancesArray2D()
+	{
+		if (dd == null)
+			constructMeanPairwiseDistancesAsArray();
+		return dd;
 	}
 	
 	public double getHeight()

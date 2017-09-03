@@ -29,7 +29,7 @@ import briefj.opt.Option;
 import briefj.run.Mains;
 import briefj.run.Results;
 
-public class PhyloSPF implements Runnable 
+public class TestPhyloSPF implements Runnable 
 {
 	@Option(required=true)
 	public double targetESS = 1.0;
@@ -217,7 +217,7 @@ public class PhyloSPF implements Runnable
 				}
 			}
 			*/
-			Counter<UnorderedPair<Taxon, Taxon>> dist = processor.getMeanDistances();
+			Counter<UnorderedPair<Taxon, Taxon>> dist = processor.getMeanPairwiseDistances();
 			for (UnorderedPair<Taxon, Taxon> key : dist.keySet())
 			{
 				int i = taxonIndexer.o2i(key.getFirst());
@@ -248,7 +248,7 @@ public class PhyloSPF implements Runnable
 			}
 			System.out.println(phylogeny.getNewickFormat());
 			System.out.println(phylogeny.getDataString());
-	
+
 			File resultsDir = Results.getResultFolder();
 			OutputHelper.writeTableAsCSV(new File(resultsDir, "output" + simulNo + "/phylo-pairwise-dist-spf.csv"), header, dd);
 			OutputHelper.writeTableAsCSV(new File(resultsDir, "output" + simulNo + "/phylo-pairwise-dist-truth-spf.csv"), header, trueDistances);
@@ -286,7 +286,7 @@ public class PhyloSPF implements Runnable
 
 	public static void main(String[] args) 
 	{
-		Mains.instrumentedRun(args, new PhyloSPF());
+		Mains.instrumentedRun(args, new TestPhyloSPF());
 	}
 
 }

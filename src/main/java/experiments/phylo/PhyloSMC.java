@@ -138,7 +138,7 @@ public class PhyloSMC implements Runnable
 			double logLik = PhyloOptions.calc.computeLoglik(state.getCoalescent().getTaxon().getLikelihoodTable());
 			logLiks.add(logLik);
 		}
-		Counter<UnorderedPair<Taxon, Taxon>> dist = processor.getMeanDistances();
+		Counter<UnorderedPair<Taxon, Taxon>> dist = processor.getMeanPairwiseDistances();
 		for (UnorderedPair<Taxon, Taxon> key : dist.keySet())
 		{
 			int i = taxonIndexer.o2i(key.getFirst());
