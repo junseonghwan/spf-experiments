@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.distribution.MultivariateNormalDistribution;
 import org.jblas.DoubleMatrix;
 import org.jblas.MatrixFunctions;
@@ -67,7 +68,7 @@ public class LikelihoodCalculatorExpFam implements LikelihoodCalculatorInterface
 	 * compute the likelihood table
 	 */
 	@Override
-	public double [][] computeLikelihoodTable(RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2)
+	public Pair<Double, double [][]> computeLikelihoodTable(RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2, boolean peek)
 	{
 		double [][] P1 = getTransitionMatrix(b1).toArray2();
 		double [][] P2 = getTransitionMatrix(b2).toArray2();
@@ -96,7 +97,7 @@ public class LikelihoodCalculatorExpFam implements LikelihoodCalculatorInterface
 			}
 		}
 
-		return likelihoodTable;
+		return Pair.of(0.0, likelihoodTable);
 	}
 
 	@Override
@@ -239,7 +240,7 @@ public class LikelihoodCalculatorExpFam implements LikelihoodCalculatorInterface
 				RootedPhylogeny phylo2 = new RootedPhylogeny(t2);
 				RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t0"), phylo1, phylo2, b1, b1, b1, false);
 				
-				double [][] likelihoodTable = calc.computeLikelihoodTable(phylo1, phylo2, b1, b1);
+				double [][] likelihoodTable = calc.computeLikelihoodTable(phylo1, phylo2, b1, b1, false).getRight();
 				double logLik = calc.computeLoglik(likelihoodTable);
 				double lik = Math.exp(logLik);
 				totalProb += lik;

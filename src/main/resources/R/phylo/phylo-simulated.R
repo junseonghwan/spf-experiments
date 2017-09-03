@@ -1,13 +1,13 @@
 rm(list=ls())
 method_type<-"spf"
-dir1k<-paste("~/Dropbox/Research/repo/spf-experiments/output/test2/", sep="")
+dir1k<-paste("~/Dropbox/Research/repo/spf-experiments/output/test3/", sep="")
 numSimul<-50
 sum1k <- rep(0, numSimul)
 quan1k<-rep(0, numSimul)
 hh<-rep(0, numSimul)
 dd<-rep(0, numSimul)
 mu<-rep(0, numSimul)
-pdf("~/temp/file2.pdf",width=6,height=4,paper='special')
+pdf("~/temp/file3.pdf",width=6,height=4,paper='special')
 for (i in 1:numSimul)
 {
   d1k<-read.csv(paste(dir1k, "output", i, "/phylo-", method_type, "-heights.csv", sep=""), header=F)
@@ -51,3 +51,4 @@ plot(density(xx))
 abline(v=qq, col='red')
 mean(qq >= xx)
 sum(dd)
+which.max(dd)

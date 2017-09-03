@@ -83,7 +83,7 @@ public class TestLikelihood
 		FelsensteinPruningAlgorithm peeling = new FelsensteinPruningAlgorithm(jcModel);
 		RootedPhylogeny t1 = new RootedPhylogeny(taxon1);
 		RootedPhylogeny t2 = new RootedPhylogeny(taxon2);
-		double [][] likTable = peeling.computeLikelihoodTable(t1, t2, b1, b2);
+		double [][] likTable = peeling.computeLikelihoodTable(t1, t2, b1, b2, false).getRight();
 
 		for (int s = 0; s < s1.length(); s++)
 		{
