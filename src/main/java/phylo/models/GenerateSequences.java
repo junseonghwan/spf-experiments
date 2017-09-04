@@ -91,7 +91,7 @@ public class GenerateSequences
 
 		int numSites = 10;
 		
-		EvolutionaryModel jcModel = new JukesCantor(1.2);
+		EvolutionaryModel jcModel = new JukesCantorModel(1.2);
 		GenerateSequences.generateSequencesFromModel(rand, jcModel, phylogeny, numSites);
 
 		System.out.println(phylogeny.getTreeString());

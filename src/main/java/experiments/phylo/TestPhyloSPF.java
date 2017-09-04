@@ -16,7 +16,8 @@ import phylo.RootedPhylogenyProcessor;
 import phylo.Taxon;
 import phylo.models.Coalescent;
 import phylo.models.GenerateSequences;
-import phylo.models.JukesCantor;
+import phylo.models.JukesCantorModel;
+import pmcmc.proposals.RealVectorParameters;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
 import util.OutputHelper;
@@ -124,7 +125,7 @@ public class TestPhyloSPF implements Runnable
 		LikelihoodCalculatorExpFam calc = new LikelihoodCalculatorExpFam(model, learnedModel);
 		*/
 
-		EvolutionaryModel model = new JukesCantor(1.0);
+		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(1.0);
 		/*
 		double [] pi = new double[]{0.3,0.2,0.2,0.3};
 		//GTRModelParams gtrParams = new GTRModelParams(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble());

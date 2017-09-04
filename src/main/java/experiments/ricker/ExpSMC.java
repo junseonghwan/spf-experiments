@@ -4,10 +4,9 @@ import java.io.File;
 import java.util.List;
 import java.util.Random;
 
-import models.RickerModel;
-
 import org.apache.commons.lang3.tuple.Pair;
 
+import dynamic.models.RickerModel;
 import simplesmc.GenericParticleProcessor;
 import simplesmc.SMCAlgorithm;
 import simplesmc.SMCOptions;
@@ -37,7 +36,8 @@ public class ExpSMC implements Runnable
 		//List<Pair<List<Double>, List<Integer>>> data = RickerModel.generate(random, numSimulations, T, N0, phi, var, r);
 		// read the data
 		Pair<List<Double>, List<Integer>> ret = RickerModel.readFromFile(data_path);
-		RickerParams params = new RickerParams(phi, r, var);
+		
+		RickerModel model = new RickerModel(N0, phi, var, r);
 
 		// now, run SMC and infer the latent variables
 		for (int i = 0; i < numSimulations; i++)
@@ -45,7 +45,7 @@ public class ExpSMC implements Runnable
 			Random rand = new Random(random.nextLong());
 			//Pair<List<Double>, List<Integer>> ret = data.get(i);
 
-			SMCProblemSpecification<Double> problemSpec = new RickerSMCProblemSpecification(T, params, ret.getRight());
+			SMCProblemSpecification<Double> problemSpec = new RickerSMCProblemSpecification(T, model, ret.getRight());
 			SMCOptions options = new SMCOptions();
 			options.nParticles = numParticles;
 			options.random = rand;

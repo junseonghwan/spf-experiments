@@ -8,7 +8,7 @@ import java.util.Random;
 
 import org.junit.Assert;
 import phylo.models.DNAIndexer;
-import phylo.models.JukesCantor;
+import phylo.models.JukesCantorModel;
 
 /**
  * Test the likelihood computation.
@@ -50,7 +50,7 @@ public class TestLikelihood
 		Taxon taxon2 = new Taxon("t2", s2);
 		int S = s1.length();
 
-		EvolutionaryModel jcModel = new JukesCantor(mu);
+		EvolutionaryModel jcModel = new JukesCantorModel(mu);
 		double [] pi = jcModel.getStationaryDistribution();
 		double [][] P1 = PhyloUtils.getTransitionMatrix(jcModel, b1);
 		double [][] P2 = PhyloUtils.getTransitionMatrix(jcModel, b2);

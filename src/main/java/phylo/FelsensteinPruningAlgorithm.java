@@ -4,11 +4,12 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.distributions.Multinomial;
 import phylo.models.DNAIndexer;
+import pmcmc.proposals.RealVectorParameters;
 
 public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterface
 {
-	private EvolutionaryModel model;
-	public FelsensteinPruningAlgorithm(EvolutionaryModel model)
+	private EvolutionaryModel<RealVectorParameters> model;
+	public FelsensteinPruningAlgorithm(EvolutionaryModel<RealVectorParameters> model)
 	{
 		this.model = model;
 	}

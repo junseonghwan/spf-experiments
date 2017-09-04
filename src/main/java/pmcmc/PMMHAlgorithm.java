@@ -21,38 +21,49 @@ import util.OutputHelper;
 public class PMMHAlgorithm<P extends ModelParameters, S> 
 {
 	private final AbstractSMCAlgorithm<S> smcAlgorithm;
-	private final MCMCProblemSpecification<P> mcmcProblemSpecification;
+	private final MCMCProposal<P> mcmcProposal;
+	private final ProbabilityDistribution<P> prior;
 	private final PMCMCOptions options;
-	private final P params;
+	private final Model<P> model;
 	private final List<PMCMCProcessor<P>> processors;
 	private int nAccepts = 0;
 	private SummaryStatistics marginalLikelihoodStat = new SummaryStatistics();
 	private LogZProcessor<P> logZProcessor;
 	private List<SummaryStatistics> smcStatistics = null;
 	private List<SummaryStatistics> smcTimingStatistics = null;
+	private List<P> paramsDuringBurnIn;
+	private boolean adaptiveMCMC = false;
 
 	public PMMHAlgorithm(
-			P params,
+			Model<P> model,
 			AbstractSMCAlgorithm<S> smcAlgorithm, 
-			MCMCProblemSpecification<P> mcmcProblemSpecification,
-			PMCMCOptions options)
+			MCMCProposal<P> mcmcProblemSpecification,
+			ProbabilityDistribution<P> prior,
+			PMCMCOptions options,
+			boolean adaptiveMCMC)
 	{
-		this(params, smcAlgorithm, mcmcProblemSpecification, options, null, null);
+		this(model, smcAlgorithm, mcmcProblemSpecification, prior, options, null, null, adaptiveMCMC);
 	}
 
 	public PMMHAlgorithm(
-			P params,
+			Model<P> model,
 			AbstractSMCAlgorithm<S> smcAlgorithm, 
-			MCMCProblemSpecification<P> mcmcProblemSpecification,
+			MCMCProposal<P> mcmcProblemSpecification,
+			ProbabilityDistribution<P> prior,
 			PMCMCOptions options,
 			List<PMCMCProcessor<P>> processors,
-			LogZProcessor<P> logZProcessor)
+			LogZProcessor<P> logZProcessor,
+			boolean adaptiveMCMC)
 	{
+		this.model = model;
 		this.smcAlgorithm = smcAlgorithm;
-		this.mcmcProblemSpecification = mcmcProblemSpecification;
+		this.mcmcProposal = mcmcProblemSpecification;
+		this.prior = prior;
 		this.options = options;
-		this.params = params;
 		this.logZProcessor = logZProcessor;
+		this.adaptiveMCMC = adaptiveMCMC;
+		if (adaptiveMCMC)
+			this.paramsDuringBurnIn = new ArrayList<>();			
 		
 		if (processors == null)
 			this.processors = new ArrayList<>();
@@ -68,51 +79,64 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 
 	public void sample()
 	{
-		// run SMC algorithm for the given parameter p to obtain 
+		// run SMC algorithm for the initial parameter p to obtain 
 		smcAlgorithm.sample();
 		double logZCurr = smcAlgorithm.logNormEstimate();
-		double logPriorCurr = mcmcProblemSpecification.logPriorDensity(params);
-		
+		double logPriorCurr = prior.logDensity(model.getModelParameters());
+
 		for (int iter = 0; iter < options.nIter; iter++)
 		{
 			// propose new values for the parameters
-			P pstar = mcmcProblemSpecification.propose(options.random, params);
-			// quick check:
-			if (Double.isInfinite(mcmcProblemSpecification.logPriorDensity(pstar)))
+			P pcurr = model.getModelParameters();
+			P pstar = mcmcProposal.propose(options.random, model.getModelParameters());
+			// quick check to see if pstar is in the support set:
+			if (Double.isInfinite(prior.logDensity(pstar)))
 					continue;
 			// compute the acceptance ratio
-			double a = mcmcProblemSpecification.logProposalDensity(params, pstar) - mcmcProblemSpecification.logProposalDensity(pstar, params);
-			if (Double.isInfinite(a))
+			double q = mcmcProposal.logProposalDensity(pcurr, pstar);
+			double qstar = mcmcProposal.logProposalDensity(pstar, pcurr);
+			if (Double.isInfinite(qstar))
 				continue;
 
-			System.out.println(iter + ", " + params.asCommaSeparatedLine() + ", " + logZCurr + ", " + logPriorCurr + ", " + a);
-
-			// TODO: instantiate new AbstractSMCAlgorithm for each iteration?
 			// update the params with the newly proposed pstar and run SMC algorithm to get an estimate of the marginal likelihood
-			params.update(pstar);
+			model.updateModelParameters(pstar);
 			smcAlgorithm.sample();
 			updateSMCStatistics(smcAlgorithm);
 
 			double logZStar = smcAlgorithm.logNormEstimate();
-			double logPriorStar = mcmcProblemSpecification.logPriorDensity(pstar);
+			double logPriorStar = prior.logDensity(pstar);
 
-			a += logZStar + logPriorStar;
-			a -= (logZCurr + logPriorCurr);
+			double a = logZStar + logPriorStar + q;
+			a -= (logZCurr + logPriorCurr + qstar);
+			double acceptanceProb = Math.min(1.0, Math.exp(a));
 			double u = options.random.nextDouble();
-			System.out.println(iter + "*, " + pstar.asCommaSeparatedLine() + ", " + logZStar + ", " + logPriorStar + ", " + a);
-
-			a = Math.min(1.0, Math.exp(a));
-			System.out.println("a: " + Math.round(a*100)/100.0 + ", u: " + u);
-			if (u < a) {
+			System.out.println("PMCMC Iter " + iter + ": ");
+			System.out.println("p=" + pcurr.asCommaSeparatedLine() + ", " +
+					"p*=" + pstar.asCommaSeparatedLine() + ", " + 
+					"logZ=" + logZCurr + ", " + 
+					"logZ*=" + logZStar + ", " + 
+					"q=" + q + ", " +
+					"q*=" + qstar + ", " +
+					"logPrior=" + logPriorCurr + ", " + 
+					"logPrior*=" + logPriorStar + ", " +
+					"a=" + a + ", " + ", " + 
+					"P(accept)=" + acceptanceProb + ", " +
+					"u= " + u);
+			if (u < acceptanceProb) {
 				// accept the proposal
 				logZCurr = logZStar;
 				logPriorCurr = logPriorStar;
 				nAccepts++;
 			} else {
 				// revert the params
-				params.revert();
+				model.revert();
 			}
 			
+			if (iter < options.burnIn && adaptiveMCMC) {
+				paramsDuringBurnIn.add(model.getModelParameters());
+			} else if (iter == options.burnIn && adaptiveMCMC) {
+				mcmcProposal.adapt(paramsDuringBurnIn);
+			}
 			if (processors != null && iter >= options.burnIn && iter % options.thinningPeriod == 0) {
 				for (PMCMCProcessor<P> processor : processors)
 					processor.process(pstar); 

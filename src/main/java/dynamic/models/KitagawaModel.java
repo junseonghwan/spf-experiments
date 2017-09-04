@@ -1,13 +1,33 @@
-package models;
+package dynamic.models;
 
 import java.util.Random;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import pmcmc.Model;
+import pmcmc.proposals.RealVectorParameters;
 import bayonet.distributions.Normal;
 
-public class Kitagawa 
+public class KitagawaModel implements Model<RealVectorParameters>
 {
+	private RealVectorParameters params;
+	private RealVectorParameters old;
+	
+	public KitagawaModel(double var_v, double var_w)
+	{
+		this.params = new RealVectorParameters(new double[]{var_v, var_w});
+	}
+	
+	public double getVarV()
+	{
+		return this.params.getVector()[0];
+	}
+
+	public double getVarW()
+	{
+		return this.params.getVector()[1];
+	}
+
 	public static Pair<double [], double []> simulate(Random random, double var_v, double var_w, int numPoints)
 	{
 		double [] x = new double[numPoints];
@@ -22,10 +42,27 @@ public class Kitagawa
 
 		return Pair.of(x, y);
 	}
-	
+
+	@Override
+	public RealVectorParameters getModelParameters() {
+		return this.params;
+	}
+
+	@Override
+	public void updateModelParameters(RealVectorParameters p) {
+		this.old = params;
+		this.params = p;
+	}
+
+	@Override
+	public void revert() {
+		this.params = this.old;
+		this.old = null;
+	}
+
 	public static void main(String [] args)
 	{
-		Pair<double [], double []> ret = Kitagawa.simulate(new Random(1), 10, 10, 100);
+		Pair<double [], double []> ret = KitagawaModel.simulate(new Random(1), 10, 10, 100);
 		double [] x = ret.getLeft();
 		double [] y = ret.getRight();
 		for (int i = 0; i < x.length; i++)
@@ -33,5 +70,4 @@ public class Kitagawa
 			System.out.println(x[i] + ", " + y[i]);
 		}
 	}
-
 }

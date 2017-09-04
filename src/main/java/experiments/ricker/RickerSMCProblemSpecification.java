@@ -5,6 +5,7 @@ import java.util.Random;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import dynamic.models.RickerModel;
 import bayonet.distributions.Normal;
 import bayonet.distributions.Poisson;
 import bayonet.distributions.Uniform;
@@ -14,12 +15,12 @@ public class RickerSMCProblemSpecification implements SMCProblemSpecification<Do
 {
 	private int T;
 	private List<Integer> obs;
-	private RickerParams params;
+	private RickerModel model;
 
-	public RickerSMCProblemSpecification(int T, RickerParams params, List<Integer> obs)
+	public RickerSMCProblemSpecification(int T, RickerModel model, List<Integer> obs)
 	{
 		this.T = T;
-		this.params = params;
+		this.model = model;
 		this.obs = obs;
 	}
 
@@ -27,11 +28,11 @@ public class RickerSMCProblemSpecification implements SMCProblemSpecification<Do
 	public Pair<Double, Double> proposeNext(int currentSmcIteration, Random random, Double currentParticle) 
 	{
 		// propose the error term from Normal
-		double error = Normal.generate(random, 0.0, params.var.getValue());
-		double newParticle = params.r.getValue() * currentParticle * Math.exp(-currentParticle + error);
+		double error = Normal.generate(random, 0.0, model.getParamValue("var"));
+		double newParticle = model.getParamValue("r") * currentParticle * Math.exp(-currentParticle + error);
 
 		// evaluate the likelihood
-		double logWeight = Poisson.logDensity(obs.get(currentSmcIteration), params.phi.getValue()*newParticle);
+		double logWeight = Poisson.logDensity(obs.get(currentSmcIteration), model.getParamValue("phi")*newParticle);
 		return Pair.of(logWeight, newParticle);
 	}
 
@@ -40,7 +41,7 @@ public class RickerSMCProblemSpecification implements SMCProblemSpecification<Do
 	{
 		// set uniform distribution on [0, 10) as the prior
 		double newParticle = Uniform.generate(random, 0.0, 10.0);
-		double logWeight = Poisson.logDensity(obs.get(0), params.phi.getValue()*newParticle);
+		double logWeight = Poisson.logDensity(obs.get(0), model.getParamValue("phi")*newParticle);
 		return Pair.of(logWeight, newParticle);
 	}
 

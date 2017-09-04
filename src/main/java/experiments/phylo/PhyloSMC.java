@@ -14,7 +14,8 @@ import phylo.RootedPhylogenyProcessor;
 import phylo.Taxon;
 import phylo.models.Coalescent;
 import phylo.models.GenerateSequences;
-import phylo.models.JukesCantor;
+import phylo.models.JukesCantorModel;
+import pmcmc.proposals.RealVectorParameters;
 import simplesmc.SMCAlgorithm;
 import simplesmc.SMCOptions;
 import util.OutputHelper;
@@ -84,7 +85,7 @@ public class PhyloSMC implements Runnable
 		LikelihoodCalculatorExpFam calc = new LikelihoodCalculatorExpFam(model, learnedModel);
 		*/
 
-		EvolutionaryModel model = new JukesCantor(0.05);
+		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(0.05);
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
 
 		// generate the data and the tree

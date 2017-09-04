@@ -1,4 +1,4 @@
-package models;
+package dynamic.models;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -7,13 +7,29 @@ import java.util.Random;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import pmcmc.Model;
+import pmcmc.proposals.RealVectorParameters;
 import bayonet.distributions.Normal;
 import bayonet.distributions.Poisson;
 import briefj.BriefIO;
+import briefj.Indexer;
 
-public class RickerModel 
+public class RickerModel implements Model<RealVectorParameters>
 {
+	private RealVectorParameters params;
+	private RealVectorParameters old;
+	private Indexer<String> paramIndexer;
+
+	public static String [] paramNames = new String[]{"N0", "phi", "var", "r"};
 	
+	public RickerModel(double N0, double phi, double var, double r)
+	{
+		params = new RealVectorParameters(new double[]{N0, phi, var, r});
+		this.paramIndexer = new Indexer<>();
+		for (String paramName : paramNames)
+			this.paramIndexer.addToIndex(paramName);
+	}
+
 	public static List<Pair<List<Double>, List<Integer>>> generate(Random random, int numSimulations, int T, double N0, double phi, double var, double r)
 	{
 		// generate the latent variable and the data (all at once)
@@ -78,6 +94,30 @@ public class RickerModel
 		return Pair.of(latent, obs);
 	}
 
+	@Override
+	public RealVectorParameters getModelParameters() {
+		return params;
+	}
+
+	@Override
+	public void updateModelParameters(RealVectorParameters p) {
+		this.old = this.params;
+		this.params = p;
+	}
+
+	@Override
+	public void revert() {
+		this.params = this.old;
+		this.old = null;
+	}
+	
+	public double getParamValue(String paramName)
+	{
+		if (!paramIndexer.containsObject(paramName))
+			throw new RuntimeException("Parameter name " + paramName + " does not exist for Ricker model.");
+		return this.params.getVector()[paramIndexer.o2i(paramName)];
+	}
+	
 	public static void main(String [] args)
 	{
 		Random random = new Random(123);
@@ -88,4 +128,5 @@ public class RickerModel
 			System.out.println(ret.getLeft().get(i) + ", " + ret.getRight().get(i));
 		}
 	}
+
 }

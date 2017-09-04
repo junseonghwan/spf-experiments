@@ -5,6 +5,7 @@ import java.util.*;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import dynamic.models.KitagawaModel;
 import simplesmc.GenericParticleProcessor;
 import simplesmc.ParticleProcessor;
 import simplesmc.SMCProblemSpecification;
@@ -14,7 +15,6 @@ import spf.ResamplingScheme;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
 import util.OutputHelper;
-import models.Kitagawa;
 import bayonet.distributions.Normal;
 import bayonet.smc.ParticlePopulation;
 import briefj.opt.Option;
@@ -35,7 +35,6 @@ public class ExpSpfSmc implements Runnable
 	@Option(required=false) public static boolean generateOutput = true;
 
 	public static KitagawaSMCProblemSpecification proposal;
-	public static KitagawaParams params = new KitagawaParams();
 
 	@Override
 	public void run()
@@ -52,11 +51,12 @@ public class ExpSpfSmc implements Runnable
 		// 2. perform inference using SMC using K particles
 		// 3. perform inference using SPF using K concrete particles
 		// 4. compare the two distributions
-		Pair<double [], double []> ret = Kitagawa.simulate(random, var_v, var_w, R);
+		Pair<double [], double []> ret = KitagawaModel.simulate(random, var_v, var_w, R);
 		double [] x = ret.getLeft();
 		double [] y = ret.getRight();
 
-		proposal = new KitagawaSMCProblemSpecification(params, y);
+		KitagawaModel model = new KitagawaModel(var_v, var_w);
+		proposal = new KitagawaSMCProblemSpecification(model, y);
 		
 		OutputHelper.writeTableAsCSV(new File(generatedDataOutputPath), new String[]{"x", "y"}, x, y);
 

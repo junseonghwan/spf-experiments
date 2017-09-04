@@ -1,4 +1,4 @@
-package models;
+package dynamic.models;
 
 import java.util.Random;
 

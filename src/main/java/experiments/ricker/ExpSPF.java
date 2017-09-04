@@ -6,12 +6,12 @@ import java.util.Random;
 
 import org.apache.commons.lang3.tuple.Pair;
 
+import dynamic.models.RickerModel;
 import simplesmc.GenericParticleProcessor;
 import simplesmc.SMCProblemSpecification;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
 import util.OutputHelper;
-import models.RickerModel;
 import briefj.opt.Option;
 import briefj.run.Mains;
 import briefj.run.Results;
@@ -34,13 +34,13 @@ public class ExpSPF implements Runnable
 		// generate the latent variable and the data (all at once)
 		List<Pair<List<Double>, List<Integer>>> data = RickerModel.generate(random, numSimulations, T, N0, phi, var, r);
 
+		RickerModel model = new RickerModel(N0, phi, var, r);
 		// now, run SPF and infer the latent variables
 		for (int i = 0; i < numSimulations; i++)
 		{
 			Pair<List<Double>, List<Integer>> ret = data.get(i);
-			RickerParams params = new RickerParams(phi, r, var);
 
-			SMCProblemSpecification<Double> problemSpec = new RickerSMCProblemSpecification(T, params, ret.getRight());
+			SMCProblemSpecification<Double> problemSpec = new RickerSMCProblemSpecification(T, model, ret.getRight());
 			SPFOptions options = new SPFOptions();
 			options.maxNumberOfVirtualParticles = maxVirtualParticles;
 			options.numberOfConcreteParticles = numConcreteParticles;

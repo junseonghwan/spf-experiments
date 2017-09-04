@@ -3,20 +3,21 @@ package experiments.ricker;
 import java.util.List;
 import java.util.Random;
 
-import models.RickerModel;
-
 import org.apache.commons.lang3.tuple.Pair;
 
-import pmcmc.MCMCProblemSpecification;
+import dynamic.models.RickerModel;
 import pmcmc.PMCMCOptions;
 import pmcmc.PMMHAlgorithm;
+import pmcmc.prior.MultivariateUniformPrior;
+import pmcmc.proposals.MultivariateIndependentGaussianRandomWalk;
+import pmcmc.proposals.RealVectorParameters;
 import simplesmc.SMCProblemSpecification;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
 import briefj.opt.Option;
 import briefj.run.Mains;
 
-public class ExpSPFPMMH 
+public class RickerSpfPmmh 
 implements Runnable
 {
 	@Option(required=false) public static Random random = new Random(721);
@@ -32,11 +33,12 @@ implements Runnable
 	public void run()
 	{
 		Pair<List<Double>, List<Integer>> ret = RickerModel.simulate(random, T, N0, phi, var, r);
-		MCMCProblemSpecification<RickerParams> mcmcProblemSpec = new RickerMCMCProblemSpecification();
-		
-		RickerParams params = new RickerParams(15, 20, 1);
 
-		SMCProblemSpecification<Double> problemSpec = new RickerSMCProblemSpecification(T, params, ret.getRight());
+		RickerModel model = new RickerModel(N0, phi, var, r);
+		MultivariateUniformPrior prior = new MultivariateUniformPrior(new double[]{0.0, Double.POSITIVE_INFINITY}, false, true);
+		double [] sd = new double[]{0.01, 0.01, 0.01, 0.01};
+		MultivariateIndependentGaussianRandomWalk migrwProposal = new MultivariateIndependentGaussianRandomWalk(model.getModelParameters().getVector(), sd); 
+		SMCProblemSpecification<Double> problemSpec = new RickerSMCProblemSpecification(T, model, ret.getRight());
 		SPFOptions spfOptions = new SPFOptions();
 		spfOptions.maxNumberOfVirtualParticles = maxVirtualParticles;
 		spfOptions.numberOfConcreteParticles = numConcreteParticles;
@@ -48,14 +50,14 @@ implements Runnable
 		pmcmcOptions.burnIn = 1000;
 		pmcmcOptions.nIter = 10000;
 		pmcmcOptions.thinningPeriod = 1;
-		PMMHAlgorithm<RickerParams, Double> pmmh = new PMMHAlgorithm<RickerParams, Double>(params, spf, mcmcProblemSpec, pmcmcOptions);
+		PMMHAlgorithm<RealVectorParameters, Double> pmmh = new PMMHAlgorithm<>(model, spf, migrwProposal, prior, pmcmcOptions, true);
 		pmmh.sample();
 		System.out.println(pmmh.nAccepts());
 	}
 	
 	public static void main(String [] args)
 	{
-		Mains.instrumentedRun(args, new ExpSPFPMMH());
+		Mains.instrumentedRun(args, new RickerSpfPmmh());
 	}
 
 }

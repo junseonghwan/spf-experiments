@@ -5,8 +5,9 @@ import org.jblas.DoubleMatrix;
 import bayonet.math.NumericalUtils;
 import briefj.Indexer;
 import phylo.EvolutionaryModel;
+import pmcmc.proposals.RealVectorParameters;
 
-public class Felsenstein81 implements EvolutionaryModel
+public class Felsenstein81 implements EvolutionaryModel<RealVectorParameters>
 {
 	private double [] pi;
 	private DoubleMatrix Q;
@@ -55,6 +56,21 @@ public class Felsenstein81 implements EvolutionaryModel
 	public double[] getStationaryDistribution() 
 	{
 		return pi;
+	}
+
+	@Override
+	public RealVectorParameters getModelParameters() {
+		throw new RuntimeException();
+	}
+
+	@Override
+	public void updateModelParameters(RealVectorParameters p) {
+		throw new RuntimeException();
+	}
+
+	@Override
+	public void revert() {
+		throw new RuntimeException();
 	}
 
 }

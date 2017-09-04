@@ -13,7 +13,7 @@ public class PMCMCOptions
 	  public int nIter = 10000;
 
 	  @Option(gloss = "Number of burnin interations")
-	  public int burnIn = 1000;
+	  public int burnIn = 100;
 
 	  @Option(gloss = "Thinning period. Should be greater or equal to 1.") 
 	  public int thinningPeriod = 20;

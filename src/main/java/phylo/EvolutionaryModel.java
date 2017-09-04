@@ -2,7 +2,10 @@ package phylo;
 
 import org.jblas.DoubleMatrix;
 
-public interface EvolutionaryModel 
+import pmcmc.Model;
+import pmcmc.ModelParameters;
+
+public interface EvolutionaryModel<P extends ModelParameters> extends Model<P>
 {
 	public DoubleMatrix getRateMatrix();
 	public double [] getStationaryDistribution();

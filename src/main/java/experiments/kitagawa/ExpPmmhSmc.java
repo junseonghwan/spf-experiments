@@ -4,11 +4,13 @@ import java.util.Random;
 
 import org.apache.commons.lang3.tuple.Pair;
 
-import models.Kitagawa;
+import dynamic.models.KitagawaModel;
 import pmcmc.LogZProcessor;
-import pmcmc.MCMCProblemSpecification;
 import pmcmc.PMCMCOptions;
 import pmcmc.PMMHAlgorithm;
+import pmcmc.prior.MultivariateUniformPrior;
+import pmcmc.proposals.MultivariateIndependentGaussianRandomWalk;
+import pmcmc.proposals.RealVectorParameters;
 import simplesmc.AbstractSMCAlgorithm;
 import simplesmc.SMCAlgorithm;
 import simplesmc.SMCOptions;
@@ -38,14 +40,15 @@ public class ExpPmmhSmc implements Runnable
 	@Override
 	public void run()
 	{
-		Pair<double[], double[]> ret = Kitagawa.simulate(random, var_v, var_w, R);
+		Pair<double[], double[]> ret = KitagawaModel.simulate(random, var_v, var_w, R);
 
-		LogZProcessor<KitagawaParams> logZProcessor = new LogZProcessor<>("smc");
+		LogZProcessor<RealVectorParameters> logZProcessor = new LogZProcessor<>("smc");
 
-		MCMCProblemSpecification<KitagawaParams> mcmcProblemSpecification = new KitagawaMCMCProblemSpecification(shape, rate, sd_v, sd_w);
-		KitagawaParams params = mcmcProblemSpecification.initialize(pmcmcOptions.random);
-		AbstractSMCAlgorithm<Double> smcAlgorithm = new SMCAlgorithm<>(new KitagawaSMCProblemSpecification(params, ret.getRight()), smcOptions);
-		PMMHAlgorithm<KitagawaParams, Double> pmmh = new PMMHAlgorithm<KitagawaParams, Double>(params, smcAlgorithm, mcmcProblemSpecification, pmcmcOptions, null, logZProcessor);
+		KitagawaModel model = new KitagawaModel(var_v, var_w);
+		MultivariateUniformPrior prior = new MultivariateUniformPrior(new double[]{0.0, 10.0}, false, true);
+		MultivariateIndependentGaussianRandomWalk migrw = new MultivariateIndependentGaussianRandomWalk(new double[]{random.nextDouble(), random.nextDouble()}, new double[]{0.01, 0.01});
+		AbstractSMCAlgorithm<Double> smcAlgorithm = new SMCAlgorithm<>(new KitagawaSMCProblemSpecification(model, ret.getRight()), smcOptions);
+		PMMHAlgorithm<RealVectorParameters, Double> pmmh = new PMMHAlgorithm<>(model, smcAlgorithm, migrw, prior, pmcmcOptions, null, logZProcessor, true);
 		pmmh.sample(); // calling this function generates the output containing the parameters, logZ estimates, and number of acceptances
 	}
 

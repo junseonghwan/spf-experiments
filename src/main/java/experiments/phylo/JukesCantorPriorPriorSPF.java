@@ -12,14 +12,15 @@ import phylo.RootedPhylogeny;
 import phylo.Taxon;
 import phylo.models.Coalescent;
 import phylo.models.GenerateSequences;
-import phylo.models.JukesCantor;
+import phylo.models.JukesCantorModel;
+import pmcmc.proposals.RealVectorParameters;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
 import briefj.Indexer;
 import briefj.opt.Option;
 import briefj.run.Mains;
 
-public class JukesCantorPriorPrioSPF implements Runnable {
+public class JukesCantorPriorPriorSPF implements Runnable {
 
 	@Option(required=true)
 	public Random rand = new Random(1);
@@ -53,8 +54,9 @@ public class JukesCantorPriorPrioSPF implements Runnable {
 			taxonIndexer.addToIndex(T);
 		}
 
-		EvolutionaryModel model = new JukesCantor(mutationRate);
+		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(mutationRate);
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
+		PriorPriorProblemSpecification proposal = new PriorPriorProblemSpecification(leaves);
 
 		// generate the data and the tree
 		Random random = new Random(rand.nextLong());
@@ -65,11 +67,11 @@ public class JukesCantorPriorPrioSPF implements Runnable {
 		{
 			random = new Random(rand.nextLong());
 			System.out.println("Simulation: " + (i+1));
-			simulation(random, i+1);
+			simulation(random, proposal, i+1);
 		}
 	}
-	
-	public void simulation(Random random, int simulNo)
+
+	public void simulation(Random random, PriorPriorProblemSpecification proposal, int simulNo)
 	{
 		SPFOptions options = new SPFOptions();
 		options.maxNumberOfVirtualParticles = maxVirtualParticles;
@@ -80,7 +82,6 @@ public class JukesCantorPriorPrioSPF implements Runnable {
 		options.targetedRelativeESS = targetESS;
 		options.verbose = true;
 
-		PriorPriorProblemSpecification proposal = new PriorPriorProblemSpecification(leaves);
 		StreamingParticleFilter<PartialCoalescentState> spf = new StreamingParticleFilter<>(proposal, options);
 		spf.sample();
 		PartialCoalescentStateProcessorUtil.generateOutputSPF(simulNo, taxonIndexer, spf, phylogeny);
@@ -88,7 +89,7 @@ public class JukesCantorPriorPrioSPF implements Runnable {
 
 	public static void main(String[] args) 
 	{
-		Mains.instrumentedRun(args, new JukesCantorPriorPrioSPF());
+		Mains.instrumentedRun(args, new JukesCantorPriorPriorSPF());
 	}
 
 }

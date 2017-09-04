@@ -5,7 +5,7 @@ import org.junit.Test;
 
 import bayonet.math.NumericalUtils;
 import phylo.models.Felsenstein81;
-import phylo.models.JukesCantor;
+import phylo.models.JukesCantorModel;
 
 public class TestCTMC 
 {
@@ -51,7 +51,7 @@ public class TestCTMC
 	
 	public void testJC(double t, double mu)
 	{
-		EvolutionaryModel jcModel = new JukesCantor(mu);
+		EvolutionaryModel jcModel = new JukesCantorModel(mu);
 		double [][] P = PhyloUtils.getTransitionMatrix(jcModel, t);
 		for (int i = 0; i < 4; i++)
 		{

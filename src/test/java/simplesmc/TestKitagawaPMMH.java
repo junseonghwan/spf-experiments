@@ -5,7 +5,7 @@ import java.util.Random;
 import org.apache.commons.lang3.tuple.Pair;
 
 import distributions.InverseGamma;
-import experiments.kitagawa.KitagawaParams;
+import dynamic.models.KitagawaModel;
 import experiments.kitagawa.KitagawaSMCProblemSpecification;
 import blang.MCMCAlgorithm;
 import blang.MCMCFactory;
@@ -16,7 +16,6 @@ import blang.variables.RealVariable;
 import briefj.opt.Option;
 import briefj.opt.OptionSet;
 import briefj.run.Mains;
-import models.Kitagawa;
 import simplesmc.SMCOptions;
 import simplesmc.pmcmc.PMCMCFactor;
 import spf.SPFOptions;
@@ -44,6 +43,7 @@ public class TestKitagawaPMMH implements Runnable {
 	 */
 	public class Model
 	{
+		/*
 		@FactorArgument(makeStochastic=false)
 		public RealVariable a = new RealVariable(shape);
 		@FactorArgument(makeStochastic=false)
@@ -58,6 +58,7 @@ public class TestKitagawaPMMH implements Runnable {
 	    public InverseGamma<InverseGamma.ShapeRateParameterization> var_v = InverseGamma.on(params.var_v, a, b);
 	    @DefineFactor
 	    public InverseGamma<InverseGamma.ShapeRateParameterization> var_w = InverseGamma.on(params.var_w, a, b);
+	    */
 	}
 	
 	@Override
@@ -66,7 +67,7 @@ public class TestKitagawaPMMH implements Runnable {
 		// 1. generate the data
 		// 2. sample the parameters
 		
-		Pair<double [], double []> ret = Kitagawa.simulate(random, var_v, var_w, R);
+		Pair<double [], double []> ret = KitagawaModel.simulate(random, var_v, var_w, R);
 		observations = ret.getRight();
 		
 	    Model model = new Model();

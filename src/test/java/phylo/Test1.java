@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import phylo.models.JukesCantor;
+import phylo.models.JukesCantorModel;
 
 public class Test1 {
 
@@ -31,7 +31,7 @@ public class Test1 {
 			  taxa.add(taxon);
 		  }
 		  double mutationRate = 1.0;
-		  JukesCantor jc = new JukesCantor(mutationRate);
+		  JukesCantorModel jc = new JukesCantorModel(mutationRate);
 		  PhyloOptions.calc = new FelsensteinPruningAlgorithm(jc);
 		
 		  PartialCoalescentState currState = PartialCoalescentState.getInitial(taxa);

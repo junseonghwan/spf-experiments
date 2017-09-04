@@ -2,14 +2,15 @@ package experiments.kitagawa;
 
 import java.util.Random;
 
-import models.Kitagawa;
-
 import org.apache.commons.lang3.tuple.Pair;
 
+import dynamic.models.KitagawaModel;
 import pmcmc.LogZProcessor;
-import pmcmc.MCMCProblemSpecification;
 import pmcmc.PMCMCOptions;
 import pmcmc.PMMHAlgorithm;
+import pmcmc.prior.MultivariateUniformPrior;
+import pmcmc.proposals.MultivariateIndependentGaussianRandomWalk;
+import pmcmc.proposals.RealVectorParameters;
 import simplesmc.AbstractSMCAlgorithm;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
@@ -27,8 +28,6 @@ public class ExpPmmhSpf implements Runnable
 	@Option(required=false) public int R = 500;
 	
 	// model hyperparameters
-	@Option(required=false) public double shape = 0.01;
-	@Option(required=false) public double rate = 0.01;
 	@Option(required=false) public double sd_v = 0.15;
 	@Option(required=false) public double sd_w = 0.08;
 	
@@ -39,14 +38,15 @@ public class ExpPmmhSpf implements Runnable
 	@Override
 	public void run() 
 	{
-		Pair<double[], double[]> ret = Kitagawa.simulate(random, var_v, var_w, R);
+		Pair<double[], double[]> ret = KitagawaModel.simulate(random, var_v, var_w, R);
+		KitagawaModel model = new KitagawaModel(var_v, var_w);
+		MultivariateUniformPrior prior = new MultivariateUniformPrior(new double[]{0.0, 10.0}, false, true);
 
-		LogZProcessor<KitagawaParams> logZProcessor = new LogZProcessor<>("spf");
+		LogZProcessor<RealVectorParameters> logZProcessor = new LogZProcessor<>("spf");
 
-		MCMCProblemSpecification<KitagawaParams> mcmcProblemSpecification = new KitagawaMCMCProblemSpecification(shape, rate, sd_v, sd_w);
-		KitagawaParams params = mcmcProblemSpecification.initialize(pmcmcOptions.random);
-		AbstractSMCAlgorithm<Double> spfAlgorithm = new StreamingParticleFilter<>(new KitagawaSMCProblemSpecification(params, ret.getRight()), spfOptions);
-		PMMHAlgorithm<KitagawaParams, Double> pmmh = new PMMHAlgorithm<KitagawaParams, Double>(params, spfAlgorithm, mcmcProblemSpecification, pmcmcOptions, null, logZProcessor);
+		MultivariateIndependentGaussianRandomWalk migrw = new MultivariateIndependentGaussianRandomWalk(new double[]{random.nextDouble(), random.nextDouble()}, new double[]{0.01, 0.01});
+		AbstractSMCAlgorithm<Double> spfAlgorithm = new StreamingParticleFilter<>(new KitagawaSMCProblemSpecification(model, ret.getRight()), spfOptions);
+		PMMHAlgorithm<RealVectorParameters, Double> pmmh = new PMMHAlgorithm<>(model, spfAlgorithm, migrw, prior, pmcmcOptions, null, logZProcessor, true);
 		pmmh.sample(); // calling this function will generate the outputs
 	}
 	

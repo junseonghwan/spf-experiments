@@ -1,17 +1,13 @@
 package experiments.phylo;
 
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-import bayonet.smc.ParticlePopulation;
 import briefj.Indexer;
-import briefj.collections.Counter;
-import briefj.collections.UnorderedPair;
 import briefj.opt.Option;
+import briefj.opt.OptionSet;
 import briefj.run.Mains;
-import briefj.run.Results;
 import phylo.EvolutionaryModel;
 import phylo.FelsensteinPruningAlgorithm;
 import phylo.PartialCoalescentState;
@@ -19,16 +15,15 @@ import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
 import phylo.Taxon;
 import phylo.models.Coalescent;
-import phylo.models.GTRModel;
 import phylo.models.GenerateSequences;
-import phylo.models.JukesCantor;
+import phylo.models.JukesCantorModel;
 import pmcmc.PMCMCOptions;
 import pmcmc.PMMHAlgorithm;
-import phylo.models.GTRModel.GTRModelParams;
-import phylo.models.JukesCantor.JukesCantorParam;
+import pmcmc.prior.MultivariateUniformPrior;
+import pmcmc.proposals.MultivariateIndependentGaussianRandomWalk;
+import pmcmc.proposals.RealVectorParameters;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
-import util.OutputHelper;
 
 /**
  * Experiments to estimate the parameters of the evolutionary model.
@@ -36,30 +31,29 @@ import util.OutputHelper;
  * @author Seong-Hwan Jun (s2jun.uw@gmail.com)
  *
  */
-public class JukesCantorStreamingPMMH implements Runnable
+public class JukesCantorPriorPriorSPFPMMH implements Runnable
 {
+	@Option(required=true)
+	public Random rand = new Random(1);
 	@Option(required=true)
 	public int numConcreteParticles = 100;
 	@Option(required=true)
 	public int maxVirtualParticles = 10000;
 	@Option(required=true)
-	public Random rand = new Random(1);
-	@Option(required=true)
 	public int numSites = 1000;
 	@Option(required=true)
 	public int numTaxa = 4;
-	@Option(required=true)
-	public int chainLength = 10000;
+	@OptionSet(name="pmcmc")
+	public PMCMCOptions pmcmcOptions = new PMCMCOptions();
 	@Option(required=true)
 	public double trueMutationRate = 0.74;
 	@Option(required=true)
-	public double var = 0.01;
+	public double proposalVar = 0.1;
 
-	@Override
-	public void run()
-	{
-		Indexer<Taxon> taxonIndexer = new Indexer<Taxon>();
-		List<Taxon> leaves = new ArrayList<Taxon>();
+	Indexer<Taxon> taxonIndexer = new Indexer<Taxon>();
+	List<Taxon> leaves = new ArrayList<Taxon>();
+
+	private void generateData() {
 		for (int n = 0; n < numTaxa; n++)
 		{
 			Taxon T = new Taxon("T" + n);
@@ -68,10 +62,16 @@ public class JukesCantorStreamingPMMH implements Runnable
 		}
 
 		// instantiate the model to generate the data and the tree
-		EvolutionaryModel model = new JukesCantor(trueMutationRate);
+		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(trueMutationRate);
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
 		RootedPhylogeny phylogeny = Coalescent.sampleFromCoalescent(rand, leaves);
 		GenerateSequences.generateSequencesFromModel(rand, model, phylogeny, numSites);
+	}
+	
+	@Override
+	public void run()
+	{
+		generateData();
 
 		// specify SPF algorithm
 		SPFOptions options = new SPFOptions();
@@ -84,15 +84,13 @@ public class JukesCantorStreamingPMMH implements Runnable
 		PriorPriorProblemSpecification proposal = new PriorPriorProblemSpecification(leaves);
 		StreamingParticleFilter<PartialCoalescentState> spf = new StreamingParticleFilter<>(proposal, options);
 
-		JukesCantorParam params = new JukesCantorParam(1.2);
-		model = new JukesCantor(params.getMutationRate());
+		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(rand.nextDouble());
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
-		JukesCantorMCMCProblemSpec mcmcProblemSpecification = new JukesCantorMCMCProblemSpec(var);
-		PMCMCOptions pmcmcOptions = new PMCMCOptions();
+		MultivariateIndependentGaussianRandomWalk igrwProposal = new MultivariateIndependentGaussianRandomWalk(new double[]{0.5}, new double[]{proposalVar});
+		MultivariateUniformPrior uniformPrior = new MultivariateUniformPrior(new double[]{0.0, 1.0}, false, true);
+		
 		pmcmcOptions.random = new Random(rand.nextLong());
-		pmcmcOptions.burnIn = 0;
-		pmcmcOptions.nIter = chainLength;
-		PMMHAlgorithm<JukesCantorParam, PartialCoalescentState> pmmh = new PMMHAlgorithm<>(params, spf, mcmcProblemSpecification, pmcmcOptions);
+		PMMHAlgorithm<RealVectorParameters, PartialCoalescentState> pmmh = new PMMHAlgorithm<>(model, spf, igrwProposal, uniformPrior, pmcmcOptions, true);
 		pmmh.sample();
 	}
 
@@ -165,6 +163,6 @@ public class JukesCantorStreamingPMMH implements Runnable
 
 	public static void main(String [] args)
 	{
-		Mains.instrumentedRun(args, new JukesCantorStreamingPMMH());
+		Mains.instrumentedRun(args, new JukesCantorPriorPriorSPFPMMH());
 	}
 }
