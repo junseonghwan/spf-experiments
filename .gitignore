@@ -8,3 +8,4 @@ remote-results/
 output/
 .project
 *.class
+*.pem
