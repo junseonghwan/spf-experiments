@@ -1,14 +1,15 @@
 library(spatstat)
 rm(list=ls())
 method_type<-"smc"
-dir1k<-paste("~/Dropbox/Research/repo/spf-experiments/output/testSMC/", sep="")
+kernel_type<-"testPriorPriorSMC"
+dir1k<-paste("~/Dropbox/Research/repo/spf-experiments/output/", kernel_type, "/", sep="")
 numSimul<-50
 sum1k <- rep(0, numSimul)
 quan1k<-rep(0, numSimul)
 hh<-rep(0, numSimul)
 dd<-rep(0, numSimul)
 mu<-rep(0, numSimul)
-pdf("~/temp/fileSMC.pdf",width=6,height=4,paper='special')
+pdf(paste("~/temp/", method_type, "_", kernel_type, ".pdf", sep=""),width=6,height=4,paper='special')
 for (i in 1:numSimul)
 {
   d1k<-read.csv(paste(dir1k, "output", i, "/phylo-", method_type, "-heights.csv", sep=""), header=F)
@@ -32,7 +33,7 @@ for (i in 1:numSimul)
   idxs<-rmultinom(n = N, size = 1, prob =ww$V1)
   idxs2<-apply(idxs, 2, function(col) { which(col == 1) })
   quan1k[i]<-mean(d1k$V1[idxs2] < truth$V1)
-
+  
   trueDistMatrix<-read.csv(paste(dir1k, "output", i, "/phylo-pairwise-dist-truth-", method_type, ".csv", sep=""), header=T)
   distMatrix<-read.csv(paste(dir1k, "output", i, "/phylo-pairwise-dist-", method_type, ".csv", sep=""), header=T)
   plot(hclust(as.dist(trueDistMatrix/2)), main="true tree")

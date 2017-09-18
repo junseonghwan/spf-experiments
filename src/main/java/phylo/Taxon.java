@@ -33,7 +33,12 @@ public class Taxon
 		this.sequence = sequence;
 		initLikelihoodTable(PhyloOptions.stateIndexer);
 	}
-	
+
+	public void appendSequence(String sequence)
+	{
+		this.sequence += sequence;
+	}
+
 	public String getSequence()
 	{
 		return this.sequence;

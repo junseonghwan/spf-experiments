@@ -40,7 +40,7 @@ public class ExpPmmhSpf implements Runnable
 	{
 		Pair<double[], double[]> ret = KitagawaModel.simulate(random, var_v, var_w, R);
 		KitagawaModel model = new KitagawaModel(var_v, var_w);
-		MultivariateUniformPrior prior = new MultivariateUniformPrior(new double[]{0.0, 10.0}, false, true);
+		MultivariateUniformPrior prior = new MultivariateUniformPrior(new double[]{0.0, 10.0}, 2, false, true);
 
 		LogZProcessor<RealVectorParameters> logZProcessor = new LogZProcessor<>("spf");
 

@@ -4,6 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import bayonet.smc.ParticlePopulation;
+import briefj.Indexer;
+import briefj.opt.Option;
+import briefj.opt.OptionSet;
+import briefj.run.Mains;
 import phylo.EvolutionaryModel;
 import phylo.FelsensteinPruningAlgorithm;
 import phylo.PartialCoalescentState;
@@ -14,22 +19,14 @@ import phylo.models.Coalescent;
 import phylo.models.GenerateSequences;
 import phylo.models.JukesCantorModel;
 import pmcmc.proposals.RealVectorParameters;
-import spf.SPFOptions;
-import spf.StreamingParticleFilter;
-import briefj.Indexer;
-import briefj.opt.Option;
-import briefj.run.Mains;
+import simplesmc.SMCAlgorithm;
+import simplesmc.SMCOptions;
+import simplesmc.SMCProblemSpecification;
 
-public class JukesCantorPriorPriorSPF implements Runnable {
-
+public class JukesCantorSMC implements Runnable 
+{
 	@Option(required=true)
 	public Random rand = new Random(1);
-	@Option(required=true)
-	public int numConcreteParticles = 100;
-	@Option(required=true)
-	public int maxVirtualParticles = 10000;
-	@Option(required=true)
-	public double targetESS = 1.0;
 	@Option(required=true)
 	public int numTaxa = 20;
 	@Option(required=true)
@@ -38,6 +35,11 @@ public class JukesCantorPriorPriorSPF implements Runnable {
 	public int numSimulations = 5;
 	@Option(required=true)
 	public double mutationRate = 1.0;
+	@Option(required=true)
+	public String proposalType = "priorprior";
+	
+	@OptionSet(name="smc")
+	public SMCOptions options = new SMCOptions();
 
 	private Indexer<Taxon> taxonIndexer = new Indexer<Taxon>();
 	private List<Taxon> leaves = new ArrayList<Taxon>();
@@ -56,12 +58,19 @@ public class JukesCantorPriorPriorSPF implements Runnable {
 
 		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(mutationRate);
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
-		PriorPriorProblemSpecification proposal = new PriorPriorProblemSpecification(leaves);
 
 		// generate the data and the tree
-		Random random = new Random(rand.nextLong());
+		long seed = rand.nextLong();
+		System.out.println("seed: " + seed);
+		Random random = new Random(seed);
 		phylogeny = Coalescent.sampleFromCoalescent(random, leaves);
 		GenerateSequences.generateSequencesFromModel(random, model, phylogeny, numSites);
+		
+		SMCProblemSpecification<PartialCoalescentState> proposal = null;
+		if (proposalType.equalsIgnoreCase("priorprior"))
+			proposal = new PriorPriorProblemSpecification(leaves);
+		else if (proposalType.equalsIgnoreCase("priorpost"))
+			proposal = new PriorPostProblemSpecification(leaves);
 
 		for (int i = 0; i < numSimulations; i++)
 		{
@@ -70,26 +79,21 @@ public class JukesCantorPriorPriorSPF implements Runnable {
 			simulation(random, proposal, i+1);
 		}
 	}
-
-	public void simulation(Random random, PriorPriorProblemSpecification proposal, int simulNo)
+	
+	public void simulation(Random random, SMCProblemSpecification<PartialCoalescentState> proposal, int simulNo)
 	{
-		SPFOptions options = new SPFOptions();
-		options.maxNumberOfVirtualParticles = maxVirtualParticles;
-		options.numberOfConcreteParticles = numConcreteParticles;
-		options.mainRandom = new Random(random.nextLong());
-		options.resamplingRandom = new Random(random.nextLong());
-		options.storeParticleWeights = true;
-		options.targetedRelativeESS = targetESS;
+		options.random = new Random(random.nextLong());
 		options.verbose = true;
 
-		StreamingParticleFilter<PartialCoalescentState> spf = new StreamingParticleFilter<>(proposal, options);
-		spf.sample();
-		PartialCoalescentStateProcessorUtil.generateOutputSPF(simulNo, taxonIndexer, spf, phylogeny);
+		SMCAlgorithm<PartialCoalescentState> smc = new SMCAlgorithm<>(proposal, options);
+		ParticlePopulation<PartialCoalescentState> pop = smc.sample();
+		PartialCoalescentStateProcessorUtil.generateOutputSMC(simulNo, taxonIndexer, pop, smc, phylogeny);
 	}
+
 
 	public static void main(String[] args) 
 	{
-		Mains.instrumentedRun(args, new JukesCantorPriorPriorSPF());
+		Mains.instrumentedRun(args, new JukesCantorSMC());
 	}
 
 }

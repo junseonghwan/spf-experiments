@@ -1,9 +1,6 @@
 package spf;
 
 
-import java.util.ArrayList;
-import java.util.List;
-
 import bayonet.math.NumericalUtils;
 
 
@@ -17,13 +14,18 @@ import bayonet.math.NumericalUtils;
 public class CompactPopulation
 {
 	private boolean storeWeights = false;
-	private List<Double> logWeights;
+	private double [] logWeights;
   private int nParticles = 0;
   
+	public CompactPopulation() { 
+		this.storeWeights = false;
+	}
 	
-	public CompactPopulation(boolean storeWeights) { 
-		this.storeWeights = storeWeights; 
-		this.logWeights = new ArrayList<>();
+	public CompactPopulation(boolean storeWeights, int maxNumberOfVirtualParticles) { 
+		this.storeWeights = storeWeights;
+		if (storeWeights) {
+			this.logWeights = new double[maxNumberOfVirtualParticles];
+		}
 	}
   /**
    * Sum of the unnormalized weights (log scale)
@@ -40,7 +42,19 @@ public class CompactPopulation
     return nParticles; 
   }
   
-  public void insertLogWeight(double logWeight)
+  public synchronized void insertLogWeight(double logWeight)
+  {
+    if (storeWeights) {
+  	  logWeights[nParticles] = logWeight;
+    }
+
+    nParticles++;
+    logSum          = NumericalUtils.logAdd(logSum,              logWeight);
+    logSumOfSquares = NumericalUtils.logAdd(logSumOfSquares, 2 * logWeight);
+    //System.out.println("logw: " + logWeight + ", " + logSum);
+  }
+
+  public synchronized void insertLogWeight(double logWeight, int particleIdx)
   {
     nParticles++;
     logSum          = NumericalUtils.logAdd(logSum,              logWeight);
@@ -48,7 +62,7 @@ public class CompactPopulation
     //System.out.println("logw: " + logWeight + ", " + logSum);
     
     if (storeWeights) {
-    	logWeights.add(logWeight);
+    	logWeights[particleIdx] = logWeight;
     }
   }
   
@@ -78,5 +92,12 @@ public class CompactPopulation
     return logSumOfSquares;
   }
   
-  public List<Double> getLogWeights() { return logWeights; }
+  /*
+  public double [] getLogWeights() { 
+	  return logWeights; 
+  }
+  */
+  public double getLogWeight(int idx) {
+	  return logWeights[idx];
+  }
 }

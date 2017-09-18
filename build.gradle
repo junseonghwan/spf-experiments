@@ -3,12 +3,12 @@ apply plugin: 'maven'
 apply plugin: 'eclipse'
 apply plugin: 'application'
 
-//mainClassName = "experiments.kitagawa.ExpPmmhSmc"
-//mainClassName = "experiments.kitagawa.ExpPmmhSpf"
-//mainClassName = "experiments.phylo.PhyloSPF"
-mainClassName = "experiments.phylo.PhyloSPF"
+//mainClassName = "experiments.phylo.JukesCantorSPF"
+//mainClassName = "experiments.phylo.JukesCantorSMC"
+mainClassName = "experiments.phylo.JukesCantorSMCPMMH"
+//mainClassName = "experiments.phylo.JukesCantorSPFPMMH"
 
-applicationDefaultJvmArgs = ["-Xms256M","-Xmx8192M"]
+applicationDefaultJvmArgs = ["-Xms256M","-Xmx16384M"]
 
 eclipse { 
   classpath {

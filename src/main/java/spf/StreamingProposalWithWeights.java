@@ -22,33 +22,57 @@ public class StreamingProposalWithWeights<S> implements ProposalWithRestart<S>
     ParticlePopulation<S> previousPopulation;
     SMCProblemSpecification<S> problemSpec;
     private int nCalls = 0;
+	private long [] randomLongs = null;
 
-    public StreamingProposalWithWeights(long seed, SMCProblemSpecification<S> problemSpec, ParticlePopulation<S> previousPopulation)
+    public StreamingProposalWithWeights(long seed, SMCProblemSpecification<S> problemSpec, ParticlePopulation<S> previousPopulation, int maxNumberOfVirtualParticles)
     {
       this.seed = seed;
       this.random = new Random(seed * 171);
       this.problemSpec = problemSpec;
       this.previousPopulation = previousPopulation;
       this.permutationStream = previousPopulation == null ? null : new PermutationStream(previousPopulation.nParticles(), new Random(random.nextLong()));
+      if (randomLongs == null) {
+          this.randomLongs = new long[maxNumberOfVirtualParticles];
+          generateLongSeeds();
+      }
+    }
+    
+    public StreamingProposalWithWeights(long seed, SMCProblemSpecification<S> problemSpec, ParticlePopulation<S> previousPopulation, long [] randomSeeds)
+    {
+      this.seed = seed;
+      this.random = new Random(seed * 171);
+      this.problemSpec = problemSpec;
+      this.previousPopulation = previousPopulation;
+      this.permutationStream = previousPopulation == null ? null : new PermutationStream(previousPopulation.nParticles(), new Random(random.nextLong()));
+      this.randomLongs = randomSeeds;
+    }
+
+    private void generateLongSeeds()
+    {
+    	Random rand = new Random(this.random.nextLong());
+    	for (int i = 0; i < randomLongs.length; i++) {
+    		randomLongs[i] = rand.nextLong();
+    	}
     }
 
 	@Override
-	public Pair<Double, S> nextLogWeightSamplePair(int currentSmcIteration) {
-		Random rand = new Random(getNextSeed());
+	public Pair<Double, S> nextLogWeightSamplePair(int currentSmcIteration, int particleIdx) {
+		Random rand = new Random(getSeed(particleIdx));
 		Pair<Double, S> curLatent = currentSmcIteration == 0 
 	          ? problemSpec.proposeInitial(rand)
-	          : problemSpec.proposeNext(currentSmcIteration, rand, sampleOldLatent());
+	          : problemSpec.proposeNext(currentSmcIteration, rand, sampleOldLatent(rand, particleIdx));
 	      return curLatent;
 	}
 
     @Override
-    public double nextLogWeight(int currentSmcIteration)
+    public double nextLogWeight(int currentSmcIteration, int particleIdx)
     {
-		Random rand = new Random(getNextSeed());
+    	long seed = getSeed(particleIdx);
+		Random rand = new Random(seed);
         double curWeight = currentSmcIteration == 0 
                 ? problemSpec.proposeInitialStream(rand)
-                : problemSpec.proposeNextStream(currentSmcIteration, rand, sampleOldLatent());
-        return curWeight;    	
+                : problemSpec.proposeNextStream(currentSmcIteration, rand, sampleOldLatent(rand, particleIdx));
+        return curWeight;
     }
 
 	@Override
@@ -58,25 +82,26 @@ public class StreamingProposalWithWeights<S> implements ProposalWithRestart<S>
 
 	@Override
 	public ProposalWithRestart<S> restart() {
-		return new StreamingProposalWithWeights<S>(seed, problemSpec, previousPopulation);
+		return new StreamingProposalWithWeights<S>(seed, problemSpec, previousPopulation, this.randomLongs);
 	}
-	
-	private long getNextSeed()
+
+	private synchronized long getSeed(int particleIdx)
 	{
 		nCalls++;
-		return random.nextLong();
+		return randomLongs[particleIdx];
 	}
-	
-	public void advanceStream(int currentSmcIteration)
+
+	public void advanceStream(int currentSmcIteration, int particleIdx)
 	{
+		long seed = getSeed(particleIdx);
+		Random rand = new Random(seed);
 		if (currentSmcIteration > 0)
-			sampleOldLatent();
-		getNextSeed();
+			sampleOldLatent(rand, particleIdx);
 	}
 	
-    private S sampleOldLatent()
+    private S sampleOldLatent(Random rand, int particleIdx)
     {
-      return previousPopulation.particles.get(permutationStream.popIndex());
+      return previousPopulation.particles.get(permutationStream.popIndex(rand.nextInt(permutationStream.size())));    	
     }
 
 

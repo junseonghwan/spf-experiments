@@ -86,66 +86,89 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 
 		for (int iter = 0; iter < options.nIter; iter++)
 		{
-			// propose new values for the parameters
-			P pcurr = model.getModelParameters();
-			P pstar = mcmcProposal.propose(options.random, model.getModelParameters());
-			// quick check to see if pstar is in the support set:
-			if (Double.isInfinite(prior.logDensity(pstar)))
-					continue;
-			// compute the acceptance ratio
-			double q = mcmcProposal.logProposalDensity(pcurr, pstar);
-			double qstar = mcmcProposal.logProposalDensity(pstar, pcurr);
-			if (Double.isInfinite(qstar))
-				continue;
-
-			// update the params with the newly proposed pstar and run SMC algorithm to get an estimate of the marginal likelihood
-			model.updateModelParameters(pstar);
-			smcAlgorithm.sample();
-			updateSMCStatistics(smcAlgorithm);
-
-			double logZStar = smcAlgorithm.logNormEstimate();
-			double logPriorStar = prior.logDensity(pstar);
-
-			double a = logZStar + logPriorStar + q;
-			a -= (logZCurr + logPriorCurr + qstar);
-			double acceptanceProb = Math.min(1.0, Math.exp(a));
-			double u = options.random.nextDouble();
-			System.out.println("PMCMC Iter " + iter + ": ");
-			System.out.println("p=" + pcurr.asCommaSeparatedLine() + ", " +
-					"p*=" + pstar.asCommaSeparatedLine() + ", " + 
-					"logZ=" + logZCurr + ", " + 
-					"logZ*=" + logZStar + ", " + 
-					"q=" + q + ", " +
-					"q*=" + qstar + ", " +
-					"logPrior=" + logPriorCurr + ", " + 
-					"logPrior*=" + logPriorStar + ", " +
-					"a=" + a + ", " + ", " + 
-					"P(accept)=" + acceptanceProb + ", " +
-					"u= " + u);
-			if (u < acceptanceProb) {
-				// accept the proposal
-				logZCurr = logZStar;
-				logPriorCurr = logPriorStar;
-				nAccepts++;
-			} else {
-				// revert the params
-				model.revert();
-			}
+			if (iter % 100 == 0)
+				System.out.println("PMCMC Iter " + iter + ": ");
+			else if (options.verbose)
+				System.out.println("PMCMC Iter " + iter + ": ");
 			
 			if (iter < options.burnIn && adaptiveMCMC) {
 				paramsDuringBurnIn.add(model.getModelParameters());
 			} else if (iter == options.burnIn && adaptiveMCMC) {
 				mcmcProposal.adapt(paramsDuringBurnIn);
 			}
-			if (processors != null && iter >= options.burnIn && iter % options.thinningPeriod == 0) {
-				for (PMCMCProcessor<P> processor : processors)
-					processor.process(pstar); 
+
+			// propose new values for the parameters
+			P pcurr = model.getModelParameters();
+			P pstar = mcmcProposal.propose(options.random, model.getModelParameters());
+			boolean inSupport = true;
+			// quick check to see if pstar is in the support set:
+			if (Double.isInfinite(prior.logDensity(pstar)))
+					inSupport = false;
+			// compute the acceptance ratio
+			double q = mcmcProposal.logProposalDensity(pcurr, pstar);
+			double qstar = mcmcProposal.logProposalDensity(pstar, pcurr);
+			if (Double.isInfinite(qstar))
+				inSupport = false;
+
+			// update the params with the newly proposed pstar and run SMC algorithm to get an estimate of the marginal likelihood
+			if (inSupport) {
+				model.updateModelParameters(pstar);
+				smcAlgorithm.sample();
+				updateSMCStatistics(smcAlgorithm);
+	
+				double logZStar = smcAlgorithm.logNormEstimate();
+				double logPriorStar = prior.logDensity(pstar);
+	
+				double a = logZStar + logPriorStar + q;
+				a -= (logZCurr + logPriorCurr + qstar);
+				double acceptanceProb = Math.min(1.0, Math.exp(a));
+				double u = options.random.nextDouble();
+				if (iter % 100 == 0)
+					System.out.println("p=" + pcurr.asCommaSeparatedLine() + ", " +
+							"p*=" + pstar.asCommaSeparatedLine() + ", " + 
+							"logZ=" + logZCurr + ", " + 
+							"logZ*=" + logZStar + ", " + 
+							"q=" + q + ", " +
+							"q*=" + qstar + ", " +
+							"logPrior=" + logPriorCurr + ", " + 
+							"logPrior*=" + logPriorStar + ", " +
+							"a=" + a + ", " + ", " + 
+							"P(accept)=" + acceptanceProb + ", " +
+							"u= " + u);
+				else if (options.verbose)
+					System.out.println("p=" + pcurr.asCommaSeparatedLine() + ", " +
+							"p*=" + pstar.asCommaSeparatedLine() + ", " + 
+							"logZ=" + logZCurr + ", " + 
+							"logZ*=" + logZStar + ", " + 
+							"q=" + q + ", " +
+							"q*=" + qstar + ", " +
+							"logPrior=" + logPriorCurr + ", " + 
+							"logPrior*=" + logPriorStar + ", " +
+							"a=" + a + ", " + ", " + 
+							"P(accept)=" + acceptanceProb + ", " +
+							"u= " + u);
+				
+				if (u < acceptanceProb) {
+					// accept the proposal
+					logZCurr = logZStar;
+					logPriorCurr = logPriorStar;
+					nAccepts++;
+				} else {
+					// revert the params
+					model.revert();
+				}
+				
+				// collect the marginal likelihood stat for each proposed value of pstar
+				marginalLikelihoodStat.addValue(logZStar);
+				if (logZProcessor != null)
+					logZProcessor.process(iter, pstar, logZStar);
 			}
 
-			// collect the marginal likelihood stat for each proposed value of pstar
-			marginalLikelihoodStat.addValue(logZStar);
-			if (logZProcessor != null)
-				logZProcessor.process(iter, pstar, logZStar);
+			if (processors != null && iter >= options.burnIn && iter % options.thinningPeriod == 0) {
+				for (PMCMCProcessor<P> processor : processors)
+					processor.process(model.getModelParameters()); 
+			}
+
 		}
 
 		// output the parameters 
@@ -193,7 +216,8 @@ public class PMMHAlgorithm<P extends ModelParameters, S>
 		else if (smcAlgorithm instanceof StreamingParticleFilter)
 		{
 			StreamingParticleFilter<S> spf = (StreamingParticleFilter<S>)abstractSMC;
-			stat = spf.nImplicitParticles();			
+			//stat = spf.nImplicitParticles();
+			stat = spf.ess();
 		}
 		else
 			throw new RuntimeException("Only the standard SMC and SPF algorithms are supported.");

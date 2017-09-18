@@ -1,12 +1,16 @@
 package phylo.models;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import experiments.phylo.PartialCoalescentStateProcessorUtil;
 import phylo.RootedPhylogeny;
 import phylo.Taxon;
+import util.OutputHelper;
 import bayonet.distributions.Exponential;
+import briefj.Indexer;
 
 public class Coalescent 
 {
@@ -53,6 +57,21 @@ public class Coalescent
 	public static double nChoose2(int n)
 	{
 		return n*(n-1)/2.0;
+	}
+	
+	public static void main(String [] args)
+	{
+		List<Taxon> leaves = new ArrayList<>();
+		Indexer<Taxon> taxonIndexer = new Indexer<>();
+		for (int i = 0; i < 8; i++)
+		{
+			leaves.add(new Taxon("T" + (i+1)));
+			taxonIndexer.addToIndex(leaves.get(i));
+		}
+		RootedPhylogeny t = Coalescent.sampleFromCoalescent(new Random(12), leaves);
+		double [][] distMatrix = PartialCoalescentStateProcessorUtil.computePairwiseDistances(t, taxonIndexer);
+		String [] distanceMatrixHeader = PartialCoalescentStateProcessorUtil.constructDistanceHeader(taxonIndexer);
+		OutputHelper.writeTableAsCSV(new File("output/coalescent-sample.csv"), distanceMatrixHeader, distMatrix);
 	}
 
 }

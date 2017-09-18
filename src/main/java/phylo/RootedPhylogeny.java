@@ -155,7 +155,7 @@ public class RootedPhylogeny
   {
   	if (tree.isLeaf())
   	{
-			Taxon taxon = tree.getTaxon();
+		Taxon taxon = tree.getTaxon();
   		for (int i = 0; i < indexer.size(); i++)
   		{
   			Taxon other = indexer.i2o(i);
@@ -182,12 +182,12 @@ public class RootedPhylogeny
     		for (int i = 0; i < indexer.size(); i++)
     		{
     			Taxon other = indexer.i2o(i);
-    			
+
     			if (!set.contains(other))
     			{
-      			UnorderedPair<Taxon, Taxon> unorderedPair = UnorderedPair.of(taxon, other);
-      			double count = distance.getCount(unorderedPair) + bl;
-      			distance.setCount(unorderedPair, count);
+	      			UnorderedPair<Taxon, Taxon> unorderedPair = UnorderedPair.of(taxon, other);
+	      			double count = distance.getCount(unorderedPair) + bl;
+	      			distance.setCount(unorderedPair, count);
     			}
     		}
   		}

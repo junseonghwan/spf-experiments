@@ -37,7 +37,12 @@ public class PermutationStream
       reshuffle();
     return indices.get(index);
   }
-  
+
+  public int popIndex(int idx)
+  {
+    return indices.get(idx);
+  }
+
   private void reshuffle()
   {
     Collections.shuffle(indices, random);

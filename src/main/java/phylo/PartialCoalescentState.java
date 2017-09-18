@@ -8,6 +8,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.distributions.Exponential;
 import bayonet.distributions.Multinomial;
+import bayonet.math.NumericalUtils;
 
 public class PartialCoalescentState {
 
@@ -82,60 +83,60 @@ public class PartialCoalescentState {
 
 		return newState; // returns the weight
 	}
-
-	public Pair<Double, PartialCoalescentState> priorPost(Random random, boolean peek)
+	
+	private PartialCoalescentState coalesce(int i, int j, double delta, boolean peek)
 	{
 		PartialCoalescentState newState = copy(this);
-		double [] logProbs = new double[(int)nChoose2(newState.numTrees())];
+		newState.height = this.height + delta;
+		RootedPhylogeny t1 = newState.trees.get(i);
+		RootedPhylogeny t2 = newState.trees.get(j);
+
+		double b1 = newState.height - t1.getHeight();
+		double b2 = newState.height - t2.getHeight();
+
+		RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t" + newState.id++), t1, t2, b1, b2, newState.height, true);
+
+		newState.trees.remove(t1);
+  		newState.trees.remove(t2);
+  		newState.trees.add(parent);
+
+  		Pair<Double, double [][]> likelihoodTable = PhyloOptions.calc.computeLikelihoodTable(t1, t2, b1, b2, peek);
+		if (!peek)
+			parent.getTaxon().setLikelihoodTable(likelihoodTable.getRight());
+		parent.setLogLikelihood(likelihoodTable.getLeft()); // this is the likelihood for the tree
+		return newState;
+	}
+	
+	public Pair<Double, PartialCoalescentState> priorPost(Random random, boolean peek)
+	{
+		double [] logProbs = new double[(int)nChoose2(this.numTrees())];
 		List<Pair<Integer, Integer>> indices = new ArrayList<>();
 		int k = 0;
-		double delta = Exponential.generate(random, nChoose2(newState.numTrees()));
-		newState.height = newState.height + delta;
-		for (int i = 0; i < newState.trees.size(); i++)
+		double delta = Exponential.generate(random, nChoose2(this.numTrees()));
+		for (int i = 0; i < this.trees.size(); i++)
 		{
-			RootedPhylogeny t1 = newState.trees.get(i);
-			for (int j = i + 1; j < newState.trees.size(); j++)
+			for (int j = i + 1; j < this.trees.size(); j++)
 			{
-				RootedPhylogeny t2 = newState.trees.get(j);
-
-				// determine branch length for each of the subtrees to the parent
-				double b1 = newState.height - t1.getHeight();
-				double b2 = newState.height - t2.getHeight();
-
-				// compute the log-likelihood
-				double logLik = PhyloOptions.calc.computeLoglikInStream(t1, t2, b1, b2);
-				logProbs[k] = (logLik - (t1.logLikelihood() + t2.logLikelihood()));
+				PartialCoalescentState tempState = this.coalesce(i, j, delta, true);
+				logProbs[k] = tempState.logRatio();
 				indices.add(Pair.of(i, j));
 				k++;
 			}
 		}
+		double logw = NumericalUtils.logAdd(logProbs);
 		Multinomial.expNormalize(logProbs);
 		int idx = Multinomial.sampleMultinomial(random, logProbs);
-		double logw = Math.log(logProbs[idx]);
 
 		if (peek) {
 			return Pair.of(logw, null); 
 		} else {
-  		// now construct the likelihood table for the chosen root
-  		// construct the likelihood table
-  		int i = indices.get(idx).getLeft();
-  		int j = indices.get(idx).getRight();
-  		RootedPhylogeny t1 = newState.trees.get(i);
-  		RootedPhylogeny t2 = newState.trees.get(j);
-  		double b1 = newState.height - t1.getHeight();
-  		double b2 = newState.height - t2.getHeight();
-  		RootedPhylogeny parent = new RootedPhylogeny(new Taxon("t" + newState.id++), t1, t2, b1, b2, newState.height, true);
-  
-  		// compute the log-likelihood
-  		double [][] likelihoodTable = PhyloOptions.calc.computeLikelihoodTable(t1, t2, b1, b2, peek).getRight();
-  		parent.getTaxon().setLikelihoodTable(likelihoodTable);
-  		parent.setLogLikelihood(PhyloOptions.calc.computeLoglik(likelihoodTable));
-  
-  		// remove the subtrees and add the new root
-  		newState.trees.remove(t1);
-  		newState.trees.remove(t2);
-  		newState.trees.add(parent);
-  		return Pair.of(logw, newState);
+	  		// now construct the likelihood table for the chosen root
+	  		// construct the likelihood table
+	  		int i = indices.get(idx).getLeft();
+	  		int j = indices.get(idx).getRight();
+	  		PartialCoalescentState newState = coalesce(i, j, delta, false);
+	  
+	  		return Pair.of(logw, newState);
 		}
 	}
 
@@ -156,12 +157,17 @@ public class PartialCoalescentState {
 	
 	public double logRatio()
 	{
+		return logLik() - oldLogLik;
+	}
+	
+	public double logLik()
+	{
 		this.logLik = 0.0;
 		for (RootedPhylogeny tree : trees)
 		{
 			logLik += tree.logLikelihood();
 		}
-		return logLik - oldLogLik;
+		return logLik; 
 	}
 	
 	@Override

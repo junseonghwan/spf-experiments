@@ -45,7 +45,7 @@ public class ExpPmmhSmc implements Runnable
 		LogZProcessor<RealVectorParameters> logZProcessor = new LogZProcessor<>("smc");
 
 		KitagawaModel model = new KitagawaModel(var_v, var_w);
-		MultivariateUniformPrior prior = new MultivariateUniformPrior(new double[]{0.0, 10.0}, false, true);
+		MultivariateUniformPrior prior = new MultivariateUniformPrior(new double[]{0.0, 10.0}, 2, false, true);
 		MultivariateIndependentGaussianRandomWalk migrw = new MultivariateIndependentGaussianRandomWalk(new double[]{random.nextDouble(), random.nextDouble()}, new double[]{0.01, 0.01});
 		AbstractSMCAlgorithm<Double> smcAlgorithm = new SMCAlgorithm<>(new KitagawaSMCProblemSpecification(model, ret.getRight()), smcOptions);
 		PMMHAlgorithm<RealVectorParameters, Double> pmmh = new PMMHAlgorithm<>(model, smcAlgorithm, migrw, prior, pmcmcOptions, null, logZProcessor, true);

@@ -5,31 +5,33 @@ import java.io.PrintWriter;
 import java.util.List;
 import java.util.Random;
 
+import org.apache.commons.math3.distribution.MultivariateNormalDistribution;
+import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.stat.descriptive.MultivariateSummaryStatistics;
 
-import bayonet.distributions.Normal;
 import briefj.BriefIO;
 import briefj.run.Results;
 import pmcmc.MCMCProposal;
 
-public class MultivariateIndependentGaussianRandomWalk implements MCMCProposal<RealVectorParameters> {
+public class MultivariateGaussianRandomWalk implements MCMCProposal<RealVectorParameters> {
 
 	private double [] mu;
-	private double [] sd;
+	private double [][] covariances;
 	private int dim;
-	
-	public MultivariateIndependentGaussianRandomWalk(int dim, double [] sd) 
+
+	public MultivariateGaussianRandomWalk(int dim, double [] sd) 
 	{
-		this.dim = dim;
-		this.sd = sd;
-		this.mu = new double[dim];
+		this(new double[dim], sd);
 	}
 	
-	public MultivariateIndependentGaussianRandomWalk(double [] mu, double [] sd) 
+	public MultivariateGaussianRandomWalk(double [] mu, double [] sd) 
 	{
-		this.dim = mu.length;
-		this.sd = sd;
 		this.mu = mu;
+		this.dim = mu.length;
+		this.covariances = new double[dim][dim];
+		for (int i = 0; i < dim; i++) {
+			this.covariances[i][i] = sd[i];
+		}
 	}
 	
 	@Override
@@ -39,23 +41,19 @@ public class MultivariateIndependentGaussianRandomWalk implements MCMCProposal<R
 
 	@Override
 	public RealVectorParameters propose(Random random, RealVectorParameters curr) {
-		double [] vec = new double[dim];
 		double [] currVec = curr.getVector();
-		for (int i = 0; i < dim; i++) {
-			vec[i] = Normal.generate(random, currVec[i], Math.pow(sd[i],2));
-		}
+
+		MultivariateNormalDistribution mvn = new MultivariateNormalDistribution(currVec, covariances);
+		double [] vec = mvn.sample();
 		return new RealVectorParameters(vec);
 	}
 
 	@Override
 	public double logProposalDensity(RealVectorParameters curr, RealVectorParameters prev) {
-		double logProposalDensity = 0.0;
 		double [] currVec = curr.getVector();
 		double [] prevVec = prev.getVector();
-		for (int i = 0; i < dim; i++) {
-			logProposalDensity += Normal.logDensity(currVec[i], prevVec[i], Math.pow(sd[i],2));
-		}
-		return logProposalDensity;
+		MultivariateNormalDistribution mvn = new MultivariateNormalDistribution(prevVec, covariances);
+		return Math.log(mvn.density(currVec));
 	}
 
 	@Override
@@ -66,15 +64,20 @@ public class MultivariateIndependentGaussianRandomWalk implements MCMCProposal<R
 		{
 			summ.addValue(param.getVector());
 		}
-		sd = summ.getStandardDeviation();
+		RealMatrix cov = summ.getCovariance().scalarMultiply(2.38*2.38/dim);
 		System.out.println("Adapting covariance matrix: ");
+		this.covariances = cov.getData();
 		File resultsDir = Results.getResultFolder();
 		PrintWriter writer = BriefIO.output(new File(resultsDir, "covMatrix.csv"));
 		for (int i = 0; i < dim; i++)
 		{
-			sd[i] *= Math.pow(2.38,2)/dim;
-			System.out.println("sd[" + i + "]=" + sd[i]);
-			writer.println(sd[i]);
+			StringBuilder sb = new StringBuilder();
+			for (int j = 0; j < dim; j++) {
+				System.out.print(covariances[i][j] + " ");
+				sb.append(covariances[i][j] + " ");
+			}
+			System.out.println();
+			writer.println(sb.toString());
 		}
 		writer.close();
 	}

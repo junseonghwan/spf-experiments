@@ -7,6 +7,8 @@ import java.util.Random;
 import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.smc.ParticlePopulation;
+import phylo.FelsensteinPruningAlgorithm;
+import phylo.PhyloOptions;
 import simplesmc.AbstractSMCAlgorithm;
 import simplesmc.ParticleProcessor;
 import simplesmc.SMCProblemSpecification;
@@ -46,6 +48,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
   public ParticlePopulation<P> sample()
   {
     int nSMCIterations = problemSpec.nIterations();
+    System.out.println("params: " + ((FelsensteinPruningAlgorithm)PhyloOptions.calc).getModel().getModelParameters().asCommaSeparatedLine());
 
     // instantiate new arraylist each time
     nImplicitParticles = new ArrayList<>(nSMCIterations);
@@ -55,7 +58,8 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     timeInSeconds = new ArrayList<>(nSMCIterations);
     long start = 0, end = 0;
 
-    System.out.println("Iter=" + 1);
+    if (options.verbose)
+    	System.out.println("Iter=" + 1);
     // initial distribution
     start = System.currentTimeMillis();
     ProposalWithRestart<P> proposal = getInitialDistributionProposal();
@@ -63,6 +67,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     PropagationResult<P> propResults = propagator.execute(0);
     end = System.currentTimeMillis();
     logZ = propResults.population.logZEstimate();
+    logZs.add(logZ);
     nImplicitParticles.add((double)propResults.population.getNumberOfParticles());
     relESS.add(propResults.population.ess()/options.numberOfConcreteParticles);
     ess.add(propResults.population.ess());
@@ -73,17 +78,18 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     // recursion
     for (int i = 1; i < nSMCIterations; i++)
     {
-        System.out.println("Iter=" + (i+1));
 
       start = System.currentTimeMillis();
       if (options.storeParticleWeights)
-    	  proposal = new StreamingProposalWithWeights<>(options.mainRandom.nextLong(), problemSpec, propResults.getParticlePopulation());
+    	  proposal = new StreamingProposalWithWeights<>(options.mainRandom.nextLong(), problemSpec, propResults.getParticlePopulation(), options.maxNumberOfVirtualParticles);
       else
     	  proposal = new StreamingBootstrapProposal(options.mainRandom.nextLong(), propResults.getParticlePopulation());
       propagator = new StreamingPropagator<>(proposal, options);
       propResults = propagator.execute(i);
       end = System.currentTimeMillis();
-      logZ += propResults.population.logZEstimate();
+      double logZr = propResults.population.logZEstimate();
+      logZs.add(logZr);
+      logZ += logZr;
       nImplicitParticles.add((double)propResults.population.getNumberOfParticles());
       relESS.add(propResults.population.ess()/options.numberOfConcreteParticles);
       ess.add(propResults.population.ess());
@@ -105,7 +111,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
   private ProposalWithRestart<P> getInitialDistributionProposal()
   {
 	  if (options.storeParticleWeights)
-		  return new StreamingProposalWithWeights<>(options.mainRandom.nextLong(), problemSpec, null);
+		  return new StreamingProposalWithWeights<>(options.mainRandom.nextLong(), problemSpec, null, options.maxNumberOfVirtualParticles);
 	  else
 		  return new StreamingBootstrapProposal(options.mainRandom.nextLong(), null);
   }
@@ -138,7 +144,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     }
 
     @Override
-    public Pair<Double, P> nextLogWeightSamplePair(int currentSmcIteration)
+    public Pair<Double, P> nextLogWeightSamplePair(int currentSmcIteration, int particleIdx)
     {
       // terminology: old means the SMC generation before current (null if we are doing initial)
       //              cur means the current SMC generation
@@ -150,7 +156,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
     }
     
     @Override
-    public double nextLogWeight(int currentSmcIteration)
+    public double nextLogWeight(int currentSmcIteration, int particleIdx)
     {
         double curWeight = isInitial() 
                 ? problemSpec.proposeInitialStream(random)

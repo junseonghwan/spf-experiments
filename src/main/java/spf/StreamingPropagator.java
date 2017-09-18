@@ -8,6 +8,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.math.NumericalUtils;
 import bayonet.smc.ParticlePopulation;
+import briefj.BriefParallel;
 
 
 /**
@@ -76,11 +77,11 @@ public class StreamingPropagator<S>
    */
   public PropagationResult<S> execute(int currentSmcIteration)
   {
-    CompactPopulation population = new CompactPopulation(options.storeParticleWeights);
+    CompactPopulation population = new CompactPopulation(options.storeParticleWeights, options.maxNumberOfVirtualParticles);
     long start = System.currentTimeMillis();
     propose(
         population, 
-        options.targetedRelativeESS, 
+        options.getTargedRelativeESS(), 
         options.numberOfConcreteParticles, 
         options.maxNumberOfVirtualParticles,
         currentSmcIteration);
@@ -110,7 +111,8 @@ public class StreamingPropagator<S>
 	        currentSmcIteration);
     }
     end = System.currentTimeMillis();
-    System.out.println("resampling_time=" + (end - start)/1000.0 + " seconds.");
+    if (options.verbose)
+    	System.out.println("resampling_time=" + (end - start)/1000.0 + " seconds.");
     return new PropagationResult<>(population, samples);
   }
   
@@ -132,7 +134,7 @@ public class StreamingPropagator<S>
 	    final int nParticles = population.getNumberOfParticles();
 	    final int popAfterCollapse = sortedCumulativeProbabilities.length;
 	    final List<S> result = new ArrayList<>(popAfterCollapse);
-	    CompactPopulation sanityCheck = new CompactPopulation(false);
+	    CompactPopulation sanityCheck = new CompactPopulation();
 
 	    double normalizedPartialSum = 0.0;
 	    S candidate = null;
@@ -145,19 +147,22 @@ public class StreamingPropagator<S>
 	      while (normalizedPartialSum < nextCumulativeProbability)
 	      {
 	    	  int before = proposal.numberOfCalls();
-	    	  double logw = population.getLogWeights().get(j);
+	    	  double logw = population.getLogWeight(j);
 	    	  final double normalizedWeight = Math.exp(logw - logSum);
 	    	  normalizedPartialSum += normalizedWeight;
 	    	  if (normalizedPartialSum < nextCumulativeProbability) {
-	    		  proposal.advanceStream(currentSmcIteration);
+	    		  proposal.advanceStream(currentSmcIteration, j);
 		    	  sanityCheck.insertLogWeight(logw);
 	    	  } else {
-	    		  Pair<Double, S> nextLogWeightSamplePair = proposal.nextLogWeightSamplePair(currentSmcIteration);
+	    		  Pair<Double, S> nextLogWeightSamplePair = proposal.nextLogWeightSamplePair(currentSmcIteration, j);
 	    		  candidate = nextLogWeightSamplePair.getRight();
 	    		  logw = nextLogWeightSamplePair.getLeft();
 		    	  sanityCheck.insertLogWeight(nextLogWeightSamplePair.getLeft());
-		    	  if (!NumericalUtils.isClose(population.getLogWeights().get(j), nextLogWeightSamplePair.getLeft(), 1e-6)) {
-		    		  System.out.println("The log weights do not match: " + population.getLogWeights().get(j) + ", " + nextLogWeightSamplePair.getLeft() + ", " + j);
+		    	  //if (!NumericalUtils.isClose(population.getLogWeights().get(j), nextLogWeightSamplePair.getLeft(), 1e-6)) {
+		    	  if (!NumericalUtils.isClose(population.getLogWeight(j), nextLogWeightSamplePair.getLeft(), 1e-6)) {
+		    		  //System.out.println("The log weights do not match: " + population.getLogWeights().get(j) + ", " + nextLogWeightSamplePair.getLeft() + ", " + j);
+		    		  System.out.println("The log weights do not match: " + population.getLogWeight(j) + ", " + nextLogWeightSamplePair.getLeft() + ", " + j);
+		    		  proposal.nextLogWeightSamplePair(currentSmcIteration, j);
 		    		  throw new RuntimeException();
 		    	  }
 	    	  }
@@ -177,16 +182,24 @@ public class StreamingPropagator<S>
 
 	    // replay the last few calls of the proposal sequence to make sure things were indeed behaving deterministically
 	    for (int i = proposal.numberOfCalls(); i < nParticles; i++) {
-	    	proposal.advanceStream(currentSmcIteration);
-	    	final double normalizedWeight = Math.exp(population.getLogWeights().get(i) - logSum);
+	    	proposal.advanceStream(currentSmcIteration, i);
+	    	//final double normalizedWeight = Math.exp(population.getLogWeights().get(i) - logSum);
+	    	final double normalizedWeight = Math.exp(population.getLogWeight(j) - logSum);
 	    	normalizedPartialSum += normalizedWeight;
-	    	sanityCheck.insertLogWeight(population.getLogWeights().get(i));
+	    	//sanityCheck.insertLogWeight(population.getLogWeights().get(i));
+	    	//System.out.println(i + ", " + population.getLogWeights().get(i));
+	    	sanityCheck.insertLogWeight(population.getLogWeight(i));
 	    }
 
-	    System.out.println("# unique particles: " + numUnique);
+        if (options.verbose)
+        	System.out.println("# unique particles: " + numUnique);
 
+	    /*
 	    if (sanityCheck.getLogSum() != logSum || sanityCheck.getLogSumOfSquares() != population.getLogSumOfSquares()) 
-	      throw new RuntimeException("The provided proposal does not behave deterministically: " + sanityCheck.getLogSum() + " vs " + logSum);
+	      throw new RuntimeException("The provided proposal does not behave deterministically: " + sanityCheck.getLogSum() + " vs " + logSum + " and " + sanityCheck.getLogSumOfSquares() + " vs " + population.getLogSumOfSquares());
+	      */
+	    if (!NumericalUtils.isClose(sanityCheck.getLogSum(), logSum, 1e-6) || !NumericalUtils.isClose(sanityCheck.getLogSumOfSquares(), population.getLogSumOfSquares(), 1e-6)) 
+		      throw new RuntimeException("The provided proposal does not behave deterministically: " + sanityCheck.getLogSum() + " vs " + logSum + " and " + sanityCheck.getLogSumOfSquares() + " vs " + population.getLogSumOfSquares());
 	    
 	    return result;
 	  }
@@ -218,11 +231,12 @@ public class StreamingPropagator<S>
     final int nParticles = population.getNumberOfParticles();
     final int popAfterCollapse = sortedCumulativeProbabilities.length;
     final List<S> result = new ArrayList<>(popAfterCollapse);
-    CompactPopulation sanityCheck = new CompactPopulation(false);
+    CompactPopulation sanityCheck = new CompactPopulation();
     
     double normalizedPartialSum = 0.0;
     S candidate = null;
     int numUnique = 0;
+    int j = 0;
     for (int i = 0; i < popAfterCollapse; i++)
     {
       double nextCumulativeProbability = sortedCumulativeProbabilities[i];
@@ -230,13 +244,14 @@ public class StreamingPropagator<S>
       while (normalizedPartialSum < nextCumulativeProbability) 
       {
         int before = proposal.numberOfCalls();
-        Pair<Double, S> nextLogWeightSamplePair = proposal.nextLogWeightSamplePair(currentSmcIteration);
+        Pair<Double, S> nextLogWeightSamplePair = proposal.nextLogWeightSamplePair(currentSmcIteration, j);
         if (proposal.numberOfCalls() != before + 1)
           throw new RuntimeException("The method numberOfCalls() was incorrectly implemented in the proposal");
         candidate = nextLogWeightSamplePair.getRight();
         final double normalizedWeight = Math.exp(nextLogWeightSamplePair.getLeft() - logSum);
         normalizedPartialSum += normalizedWeight;
         sanityCheck.insertLogWeight(nextLogWeightSamplePair.getLeft());
+        j++;
       }
       if (result.size() > 0 && candidate != result.get(result.size()-1))
         	numUnique += 1;
@@ -244,11 +259,12 @@ public class StreamingPropagator<S>
         result.add(candidate);
     }
     
-    System.out.println("num_unique=" + numUnique);
+    if (options.verbose)
+    	System.out.println("num_unique=" + numUnique);
     
     // replay the last few calls of the proposal sequence to make sure things were indeed behaving deterministically
     for (int i = proposal.numberOfCalls(); i < nParticles; i++)
-      sanityCheck.insertLogWeight(proposal.nextLogWeight(currentSmcIteration));
+      sanityCheck.insertLogWeight(proposal.nextLogWeight(currentSmcIteration, i));
     if (sanityCheck.getLogSum() != logSum || sanityCheck.getLogSumOfSquares() != population.getLogSumOfSquares()) 
       throw new RuntimeException("The provided proposal does not behave deterministically: " + sanityCheck.getLogSum() + " vs " + logSum);
     
@@ -279,15 +295,19 @@ public class StreamingPropagator<S>
     int maxNumberOfParticles,
     int currentSmcIteration)
   {
-    while 
-        ( 
-          population.getNumberOfParticles() < minNumberOfParticles || 
-          (
-              population.getNumberOfParticles() < maxNumberOfParticles && 
-              population.ess() / minNumberOfParticles < targetedRelativeESS
-          )
-        )
-      population.insertLogWeight(proposal.nextLogWeight(currentSmcIteration));
+	  if (Double.isInfinite(targetedRelativeESS) && options.parallelComputation) {
+		  // use parallelization
+		  BriefParallel.process(maxNumberOfParticles, options.nThreads, particleIdx -> {
+			  double w = proposal.nextLogWeight(currentSmcIteration, particleIdx);
+			  population.insertLogWeight(w, particleIdx);
+		  });
+	  } else {
+		  int particleIdx = 0;
+	    while ( population.getNumberOfParticles() < minNumberOfParticles || 
+	          ( population.getNumberOfParticles() < maxNumberOfParticles && 
+	              population.ess() / minNumberOfParticles < targetedRelativeESS))
+	      population.insertLogWeight(proposal.nextLogWeight(currentSmcIteration, particleIdx++));
+	  }
   }
   
 }

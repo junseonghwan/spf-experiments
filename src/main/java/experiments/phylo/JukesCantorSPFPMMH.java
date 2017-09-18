@@ -17,11 +17,13 @@ import phylo.Taxon;
 import phylo.models.Coalescent;
 import phylo.models.GenerateSequences;
 import phylo.models.JukesCantorModel;
+import pmcmc.LogZProcessor;
 import pmcmc.PMCMCOptions;
 import pmcmc.PMMHAlgorithm;
 import pmcmc.prior.MultivariateUniformPrior;
 import pmcmc.proposals.MultivariateIndependentGaussianRandomWalk;
 import pmcmc.proposals.RealVectorParameters;
+import simplesmc.SMCProblemSpecification;
 import spf.SPFOptions;
 import spf.StreamingParticleFilter;
 
@@ -31,24 +33,24 @@ import spf.StreamingParticleFilter;
  * @author Seong-Hwan Jun (s2jun.uw@gmail.com)
  *
  */
-public class JukesCantorPriorPriorSPFPMMH implements Runnable
+public class JukesCantorSPFPMMH implements Runnable
 {
 	@Option(required=true)
 	public Random rand = new Random(1);
-	@Option(required=true)
-	public int numConcreteParticles = 100;
-	@Option(required=true)
-	public int maxVirtualParticles = 10000;
 	@Option(required=true)
 	public int numSites = 1000;
 	@Option(required=true)
 	public int numTaxa = 4;
 	@OptionSet(name="pmcmc")
 	public PMCMCOptions pmcmcOptions = new PMCMCOptions();
+	@OptionSet(name="spf")
+	public SPFOptions spfOptions = new SPFOptions();
 	@Option(required=true)
 	public double trueMutationRate = 0.74;
 	@Option(required=true)
 	public double proposalVar = 0.1;
+	@Option(required=true)
+	public String proposalType = "priorprior";
 
 	Indexer<Taxon> taxonIndexer = new Indexer<Taxon>();
 	List<Taxon> leaves = new ArrayList<Taxon>();
@@ -73,24 +75,32 @@ public class JukesCantorPriorPriorSPFPMMH implements Runnable
 	{
 		generateData();
 
-		// specify SPF algorithm
-		SPFOptions options = new SPFOptions();
-		options.maxNumberOfVirtualParticles = maxVirtualParticles;
-		options.numberOfConcreteParticles = numConcreteParticles;
-		options.mainRandom = new Random(rand.nextLong());
-		options.resamplingRandom = new Random(rand.nextLong());
-		options.targetedRelativeESS = Double.POSITIVE_INFINITY;
-		options.verbose = true;
-		PriorPriorProblemSpecification proposal = new PriorPriorProblemSpecification(leaves);
-		StreamingParticleFilter<PartialCoalescentState> spf = new StreamingParticleFilter<>(proposal, options);
-
-		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(rand.nextDouble());
+		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(rand.nextDouble()*5);
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
-		MultivariateIndependentGaussianRandomWalk igrwProposal = new MultivariateIndependentGaussianRandomWalk(new double[]{0.5}, new double[]{proposalVar});
-		MultivariateUniformPrior uniformPrior = new MultivariateUniformPrior(new double[]{0.0, 1.0}, false, true);
-		
+
+		// pmcmc random
 		pmcmcOptions.random = new Random(rand.nextLong());
-		PMMHAlgorithm<RealVectorParameters, PartialCoalescentState> pmmh = new PMMHAlgorithm<>(model, spf, igrwProposal, uniformPrior, pmcmcOptions, true);
+
+		// specify SPF algorithm
+		spfOptions.mainRandom = new Random(rand.nextLong());
+		spfOptions.resamplingRandom = new Random(rand.nextLong());
+		spfOptions.targetedRelativeESS = Double.POSITIVE_INFINITY;
+		spfOptions.verbose = false;
+
+		SMCProblemSpecification<PartialCoalescentState> proposal = null;
+		if (proposalType.equalsIgnoreCase("priorprior"))
+			proposal = new PriorPriorProblemSpecification(leaves);
+		else if (proposalType.equalsIgnoreCase("priorpost"))
+			proposal = new PriorPostProblemSpecification(leaves);
+
+		LogZProcessor<RealVectorParameters> logZProcessor = new LogZProcessor<>("spf");
+
+		StreamingParticleFilter<PartialCoalescentState> spf = new StreamingParticleFilter<>(proposal, spfOptions);
+
+		MultivariateIndependentGaussianRandomWalk igrwProposal = new MultivariateIndependentGaussianRandomWalk(new double[]{2.5}, new double[]{proposalVar});
+		MultivariateUniformPrior uniformPrior = new MultivariateUniformPrior(new double[]{0.0, 5.0}, 1, false, true);
+		
+		PMMHAlgorithm<RealVectorParameters, PartialCoalescentState> pmmh = new PMMHAlgorithm<>(model, spf, igrwProposal, uniformPrior, pmcmcOptions, null, logZProcessor, true);
 		pmmh.sample();
 	}
 
@@ -163,6 +173,6 @@ public class JukesCantorPriorPriorSPFPMMH implements Runnable
 
 	public static void main(String [] args)
 	{
-		Mains.instrumentedRun(args, new JukesCantorPriorPriorSPFPMMH());
+		Mains.instrumentedRun(args, new JukesCantorSPFPMMH());
 	}
 }

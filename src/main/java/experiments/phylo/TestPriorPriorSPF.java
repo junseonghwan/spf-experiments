@@ -27,17 +27,12 @@ import briefj.Indexer;
 import briefj.collections.Counter;
 import briefj.collections.UnorderedPair;
 import briefj.opt.Option;
+import briefj.opt.OptionSet;
 import briefj.run.Mains;
 import briefj.run.Results;
 
-public class TestPhyloSPF implements Runnable 
+public class TestPriorPriorSPF implements Runnable 
 {
-	@Option(required=true)
-	public double targetESS = 1.0;
-	@Option(required=true)
-	public int numConcreteParticles = 100;
-	@Option(required=true)
-	public int maxVirtualParticles = 10000;
 	@Option(required=true)
 	public Random rand = new Random(1);
 	@Option(required=true)
@@ -46,6 +41,10 @@ public class TestPhyloSPF implements Runnable
 	public int numTaxa = 4;
 	@Option(required=true)
 	public int numSimulations = 20;
+	@Option(required=true)
+	public double mutationRate = 1.7;
+	@OptionSet(name="spf")
+	public SPFOptions options = new SPFOptions();
 
 	public static Set<Integer> simulationSet = new HashSet<>();
 	private Indexer<Taxon> taxonIndexer = new Indexer<Taxon>();
@@ -125,7 +124,6 @@ public class TestPhyloSPF implements Runnable
 		LikelihoodCalculatorExpFam calc = new LikelihoodCalculatorExpFam(model, learnedModel);
 		*/
 
-		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(1.0);
 		/*
 		double [] pi = new double[]{0.3,0.2,0.2,0.3};
 		//GTRModelParams gtrParams = new GTRModelParams(rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble(), rand.nextDouble());
@@ -134,6 +132,7 @@ public class TestPhyloSPF implements Runnable
 		System.out.println(gtrParams.toString());
 		*/
 
+		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(mutationRate);
 		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
 
 		// generate the data and the tree
@@ -144,15 +143,11 @@ public class TestPhyloSPF implements Runnable
 			GenerateSequences.generateSequencesFromModel(random, model, phylogeny, numSites);
 		}
 
-		SPFOptions options = new SPFOptions();
-		options.maxNumberOfVirtualParticles = maxVirtualParticles;
-		options.numberOfConcreteParticles = numConcreteParticles;
 		options.mainRandom = new Random(random.nextLong());
 		options.resamplingRandom = new Random(random.nextLong());
-		options.targetedRelativeESS = Double.POSITIVE_INFINITY;
 		options.storeParticleWeights = true;
-		//options.targetedRelativeESS = targetESS;
 		options.verbose = true;
+		options.targetedRelativeESS = Double.POSITIVE_INFINITY;
 		PriorPriorProblemSpecification proposal = new PriorPriorProblemSpecification(leaves);
 		StreamingParticleFilter<PartialCoalescentState> spf = new StreamingParticleFilter<>(proposal, options);
 		long start = System.currentTimeMillis();
@@ -247,8 +242,8 @@ public class TestPhyloSPF implements Runnable
 			for (int i = 0; i < numTaxa; i++) {
 				header[i] = "T" + i;
 			}
-			System.out.println(phylogeny.getNewickFormat());
-			System.out.println(phylogeny.getDataString());
+			//System.out.println(phylogeny.getNewickFormat());
+			//System.out.println(phylogeny.getDataString());
 
 			File resultsDir = Results.getResultFolder();
 			OutputHelper.writeTableAsCSV(new File(resultsDir, "output" + simulNo + "/phylo-pairwise-dist-spf.csv"), header, dd);
@@ -287,7 +282,7 @@ public class TestPhyloSPF implements Runnable
 
 	public static void main(String[] args) 
 	{
-		Mains.instrumentedRun(args, new TestPhyloSPF());
+		Mains.instrumentedRun(args, new TestPriorPriorSPF());
 	}
 
 }

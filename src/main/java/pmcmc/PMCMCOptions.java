@@ -17,5 +17,7 @@ public class PMCMCOptions
 
 	  @Option(gloss = "Thinning period. Should be greater or equal to 1.") 
 	  public int thinningPeriod = 20;
+	  
+	  public boolean verbose = false;
 
 }

@@ -2,12 +2,12 @@ library(ggplot2)
 library(reshape2)
 library(pomp)
 library(coda)
-
+set.seed(20170904)
 pompExample(ricker)
 ricker
 plot(ricker)
 x<-simulate(ricker)
-as.data.frame(x)
+xx<-as.data.frame(x)
 plot(x)
 y<-as.data.frame(ricker)
 head(y)
@@ -19,6 +19,7 @@ sapply(x,class)
 x <- simulate(ricker,nsim=10,as.data.frame=TRUE)
 head(x)
 str(x)
+dim(x)
 
 x <- simulate(ricker,nsim=9,as.data.frame=TRUE,include.data=TRUE)
 ggplot(data=x,aes(x=time,y=y,group=sim,color=(sim=="data")))+
@@ -55,10 +56,15 @@ pf <- pfilter(pf)
 logLik(pf)
 
 # run pmcmc
-x
+xx
 chain<-pmcmc(x, Nmcmc = 1000, Np = 1000, verbose=TRUE, 
-             start=c("r"=44,"sigma"=0.2,"phi"=9,"N.0"=7,"e.0"=0), 
-             proposal=mvn.rw.adaptive(rw.sd=c(r=0.01,sigma=0.01,phi=0.01, N.0=0.01), scale.start=200,shape.start=100))
+             start=c("r"=44,"sigma"=0.2,"phi"=9,"N.0"=7,"e.0"=0,"c"=1), 
+             proposal=mvn.rw.adaptive(rw.sd=c(r=0.01,sigma=0.01,phi=0.01, N.0=0.01, c=0), scale.start=200,shape.start=100))
+
+chain<-pmcmc(x, Nmcmc = 10000, Np = 1000, verbose=TRUE, 
+             start=c("r"=32.47144855454909,"sigma"=0.3,"phi"=4.0322301387827775,"N.0"=5,"e.0"=0,"c"=1), 
+             proposal=mvn.rw.adaptive(rw.sd=c(r=0.01,sigma=0.01,phi=0.01, N.0=0.01, c=0), scale.start=200,shape.start=100))
+
 plot(chain)
 chain2<-pmcmc(chain)
 trace <- window(conv.rec(chain,c("r","sigma","phi","N.0")),start=100)
@@ -71,3 +77,7 @@ heidel.diag(trace)
 geweke.diag(trace)
 chain@conv.rec
 #bsflu_data <- read.table("https://kingaa.github.io/sbied/stochsim/bsflu_data.txt")
+
+chain<-mif2(x, Nmif = 10, Np = 1000, cooling.fraction.50 = 0.05, rw.sd=rw.sd(r=0.01,sigma=0.01,phi=0.01, N.0=0.01, c=0))
+plot(chain)
+

@@ -14,6 +14,8 @@ public class FelsensteinPruningAlgorithm implements LikelihoodCalculatorInterfac
 		this.model = model;
 	}
 	
+	public EvolutionaryModel<RealVectorParameters> getModel() { return model; }
+	
 	@Override
 	public Pair<Double, double [][]> computeLikelihoodTable(RootedPhylogeny t1, RootedPhylogeny t2, double b1, double b2, boolean peek)
 	{

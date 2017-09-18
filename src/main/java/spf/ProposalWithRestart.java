@@ -26,14 +26,14 @@ public interface ProposalWithRestart<S>
   /**
    * @return a pair of (LOG unnormalized weight, particle)
    */
-  public Pair<Double, S> nextLogWeightSamplePair(int currentSmcIteration);
+  public Pair<Double, S> nextLogWeightSamplePair(int currentSmcIteration, int particleIdx);
   
   /**
    * @return LOG unnormalized weight
    */
-  default public double nextLogWeight(int currentSmcIteration)
+  default public double nextLogWeight(int currentSmcIteration, int particleIdx)
   {
-    return nextLogWeightSamplePair(currentSmcIteration).getLeft(); 
+    return nextLogWeightSamplePair(currentSmcIteration, particleIdx).getLeft(); 
   }
   
   /**

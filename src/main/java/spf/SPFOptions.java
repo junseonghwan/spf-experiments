@@ -29,7 +29,16 @@ public class SPFOptions {
     
     @Option
     public boolean storeParticleWeights = true;
+    
+    @Option
+    public int nThreads = 4;
+    
+    @Option
+    public boolean parallelComputation = true;
 
     public static final int DEFAULT_N_CONCRETE_PARTICLES = 1000;
     
+    public double getTargedRelativeESS() {
+    	return targetedRelativeESS <= 0.0 ? Double.POSITIVE_INFINITY : targetedRelativeESS;
+    }
 }

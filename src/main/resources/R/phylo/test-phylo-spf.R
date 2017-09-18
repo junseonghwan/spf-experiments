@@ -1,13 +1,14 @@
 rm(list=ls())
 method_type<-"spf"
-dir1k<-paste("~/Dropbox/Research/repo/spf-experiments/output/test3/", sep="")
+kernel_type<-"testPriorPriorSPF"
+dir1k<-paste("~/Dropbox/Research/repo/spf-experiments/output/", kernel_type, "/", sep="")
 numSimul<-50
 sum1k <- rep(0, numSimul)
 quan1k<-rep(0, numSimul)
 hh<-rep(0, numSimul)
 dd<-rep(0, numSimul)
 mu<-rep(0, numSimul)
-pdf("~/temp/file3.pdf",width=6,height=4,paper='special')
+pdf(paste("~/temp/", method_type, "_", kernel_type, ".pdf", sep=""), width=6,height=4,paper='special')
 for (i in 1:numSimul)
 {
   d1k<-read.csv(paste(dir1k, "output", i, "/phylo-", method_type, "-heights.csv", sep=""), header=F)

@@ -20,8 +20,11 @@ public class GenericParticleProcessor implements ParticleProcessor<Double>
 	public void process(int currentIteration, ParticlePopulation<Double> population) 
 	{
 		//File results = Results.getResultFolder();
-
-		OutputHelper.writeVector(new File(outputLocation + "/" + outputFilePrefix + currentIteration + ".csv"), population.particles);
+		double [] weights = new double[population.nParticles()];
+		for (int i = 0; i < population.nParticles(); i++)
+			weights[i] = population.getNormalizedWeight(i);
+		OutputHelper.writeVector(new File(outputLocation + "/" + outputFilePrefix + "weights" + currentIteration + ".csv"), weights);
+		OutputHelper.writeVector(new File(outputLocation + "/" + outputFilePrefix + "particles" + currentIteration + ".csv"), population.particles);
 	}
 
 }

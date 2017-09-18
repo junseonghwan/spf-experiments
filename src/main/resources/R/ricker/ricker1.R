@@ -1,34 +1,62 @@
 library(ggplot2)
-xx<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-smc/simul1/ricker-smc-latent.csv", header=F)$V1
-yy<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-smc/simul1/ricker-smc-data.csv", header=F)$V1
-neff<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-smc/simul1/ricker-smc-ess.csv", header=F)
-smc_time<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-smc/simul1/ricker-smc-timing.csv", header=F)
-sum(smc_time$V1)
 
+xx<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-sis/simul1/ricker-latent.csv", header=F)$V1
+yy<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-sis/simul1/ricker-data.csv", header=F)$V1
+
+# plot of the data
+T<-length(yy)
+df1<-data.frame(r=1:T, val=yy, type="Observation")
+df2<-data.frame(r=1:T, val=xx, type="Latent")
+df<-rbind(df1, df2)
+p <- ggplot(df, aes(r, val, col=factor(type))) + geom_line() + theme_bw() + theme(legend.title=element_blank())
+p <- p + ylab("") + xlab("Time")
+p <- ggplot(df1, aes(r, val)) + geom_line() + theme_bw() + theme(legend.position = "none")
+p <- p + ylab("Observation") + xlab("Time")
+ggsave(filename = "Dropbox/Research/repo/phd-thesis/contents/smc/figs/ricker-data.pdf", p, width = 4, height = 2)
+p2 <- ggplot(df2, aes(r, val)) + geom_line() + theme_bw() + theme(legend.position = "none")
+p2 <- p2 + ylab("Latent Variable") + xlab("Time")
+p2
+ggsave(filename = "Dropbox/Research/repo/phd-thesis/contents/smc/figs/ricker-latent.pdf", p2, width = 4, height = 2)
+
+# produce the error from filtering mean and the truth as well as ess 
 T<-51
+err_sis<-rep(0, T)
+xhat_sis<-rep(0, T)
 err_smc<-rep(0, T)
-var_smc<-rep(0, T)
-mu_smc<-rep(0, T)
-interval_smc<-matrix(0, ncol = 2, nrow = T)
+xhat_smc<-rep(0, T)
 for (tt in 0:(T-1))
 {
-  dd<-read.csv(paste("~/Dropbox/Research/repo/spf-experiments/output/ricker-smc/simul1/particles/population", tt, ".csv", sep=""), header=F)
-
-  interval_smc[tt+1,]<-quantile(dd$V1, probs = c(0.025, 0.975))
-  err_smc[tt+1]<-mean((dd$V1 - xx[tt+1])^2)
-  mu_smc[tt+1]<-mean(dd$V1)
-  var_smc[tt+1]<-var(dd$V1)
+  particles<-read.csv(paste("~/Dropbox/Research/repo/spf-experiments/output/ricker-sis/simul1/population/particles", tt, ".csv", sep=""), header=F)$V1
+  weights<-read.csv(paste("~/Dropbox/Research/repo/spf-experiments/output/ricker-sis/simul1/population/weights", tt, ".csv", sep=""), header=F)$V1
+  xhat_sis[tt+1]<-sum(weights*particles)
+  err_sis[tt+1]<-abs(xx[tt+1] - xhat_sis[tt+1])
   
-  # p <- ggplot(dd, aes(V1)) + geom_density() + theme_bw()
-  # p <- p + geom_point(x=x[t+1], y=0, col='red')
-  # ggsave(paste("Google Drive/Research/repo/spf-experiments/output/ricker-plots/density-spf-", t, ".pdf", sep=""), p)
-  # 
-  # p <- ggplot(d, aes(V1)) + geom_density() + theme_bw()
-  # p <- p + geom_point(x=x[t+1], y=0, col='red')
-  # ggsave(paste("Google Drive/Research/repo/spf-experiments/output/ricker-plots/density-smc-", t, ".pdf", sep=""), p)
+  particles<-read.csv(paste("~/Dropbox/Research/repo/spf-experiments/output/ricker-smc/simul1/population/particles", tt, ".csv", sep=""), header=F)$V1
+  weights<-read.csv(paste("~/Dropbox/Research/repo/spf-experiments/output/ricker-smc/simul1/population/weights", tt, ".csv", sep=""), header=F)$V1
+  xhat_smc[tt+1]<-sum(weights*particles)
+  err_smc[tt+1]<-abs(xx[tt+1] - xhat_smc[tt+1])
 }
-plot(1:T, neff$V1, type='l')
-plot(1:T, yy, col='blue', pch=19, type='l')
-lines(1:T, xx, col='red', pch=19, type='l')
-lines(1:T, mu_smc, col='black', pch=19, type='l')
-mean((mu_smc - xx)^2)
+ess_sis<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-sis/simul1/ricker-ess.csv", header=F)
+sis_time<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-sis/simul1/ricker-timing.csv", header=F)
+df_sis<-data.frame(Time=0:(T-1), Error=err_sis, ESS=ess_sis$V1, Type="SIS")
+p1<-ggplot(df_sis, aes(Time, Error)) + geom_line() + ylab("Absolute Error") + theme_bw()
+p2<-ggplot(df_sis, aes(Time, ESS)) + geom_line() + ylab("Effective Sample Size") + theme_bw()
+ggsave(p1, filename = "~/Dropbox/Research/repo/phd-thesis/contents/smc/figs/ricker-sis-error.pdf", width=4, height=2)
+ggsave(p2, filename = "~/Dropbox/Research/repo/phd-thesis/contents/smc/figs/ricker-sis-ess.pdf", width=4, height=2)
+
+ess_smc<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-smc/simul1/ricker-ess.csv", header=F)
+smc_time<-read.csv("~/Dropbox/Research/repo/spf-experiments/output/ricker-smc/simul1/ricker-timing.csv", header=F)
+df_smc<-data.frame(Time=0:(T-1), Error=err_smc, ESS=ess_smc$V1, Type="BPF")
+p1<-ggplot(df_smc, aes(Time, Error)) + geom_line() + ylab("Absolute Error") + theme_bw()
+p2<-ggplot(df_smc, aes(Time, ESS)) + geom_line() + ylab("Effective Sample Size") + theme_bw()
+ggsave(p1, filename = "~/Dropbox/Research/repo/phd-thesis/contents/smc/figs/ricker-smc-error.pdf", width=4, height=2)
+ggsave(p2, filename = "~/Dropbox/Research/repo/phd-thesis/contents/smc/figs/ricker-smc-ess.pdf", width=4, height=2)
+
+# combine sis and smc plots together
+df<-rbind(df_sis, df_smc)
+p1<-ggplot(df, aes(Time, Error, col=Type)) + geom_line() + ylab("Absolute Error") + theme_bw() + theme(legend.title=element_blank())
+p2<-ggplot(df, aes(Time, ESS, col=factor(Type))) + geom_line() + ylab("Effective Sample Size") + theme_bw() + theme(legend.title=element_blank())
+p1
+p2
+ggsave(p1, filename = "~/Dropbox/Research/repo/phd-thesis/contents/smc/figs/ricker-error-sis-smc.pdf", width=6, height=2)
+ggsave(p2, filename = "~/Dropbox/Research/repo/phd-thesis/contents/smc/figs/ricker-ess-sis-smc.pdf", width=6, height=2)

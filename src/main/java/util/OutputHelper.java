@@ -73,6 +73,28 @@ public class OutputHelper
 		writer.close();
 	}
 	
+	public static void writeDoubleArray2DAsCSV(File file, String [] header, double [][] data)
+	{
+		PrintWriter writer = BriefIO.output(file);
+		for (int i = 0; i < header.length; i++) {
+			writer.print(header[i]);
+			if (i < header.length - 1) writer.print(",");
+			else writer.println();
+		}
+		for (int i = 0; i < data.length; i++)
+		{
+			for (int j = 0; j < data[i].length; j++) 
+			{
+				writer.print(data[i][j]);
+				if (j < data[i].length - 1)
+					writer.print(",");
+				else
+					writer.println();
+			}
+		}
+		writer.close();
+	}
+	
 	public static void writeTableAsCSV(File file, String [] header, double []... data)
 	{
 		if (header.length != data.length)

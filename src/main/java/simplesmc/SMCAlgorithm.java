@@ -9,6 +9,8 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.smc.ParticlePopulation;
 import briefj.BriefParallel;
+import phylo.FelsensteinPruningAlgorithm;
+import phylo.PhyloOptions;
 
 
 /**
@@ -47,9 +49,10 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
    */
   public ParticlePopulation<P> sample()
   {
+    System.out.println("params: " + ((FelsensteinPruningAlgorithm)PhyloOptions.calc).getModel().getModelParameters().asCommaSeparatedLine());
+
     int nSMCIterations = proposal.nIterations();
     
-    System.out.println("Iter 1");
     timeInSeconds = new ArrayList<>(nSMCIterations); 
     effectiveSampleSize = new ArrayList<>(nSMCIterations);
     logZs = new ArrayList<>(nSMCIterations);
@@ -62,13 +65,15 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
     long end = System.currentTimeMillis();
     double samplingTime = (end-start)/1000.0;
     timeInSeconds.add(samplingTime);
-	System.out.println("Sampling time: " + samplingTime + ", ESS: " + effectiveSampleSize.get(0));
+    if (options.verbose) {
+        System.out.println("Iter 1");
+    	System.out.println("Sampling time: " + samplingTime + ", ESS: " + effectiveSampleSize.get(0));
+    }
     if (processor != null)
   	  processor.process(0, currentPopulation);
     
     for (int currentIteration = 1; currentIteration < nSMCIterations; currentIteration++)
     {
-    	System.out.println("Iter " + (currentIteration + 1));
     	start = System.currentTimeMillis();
     	currentPopulation = propose(currentPopulation, currentIteration);
     	effectiveSampleSize.add(currentPopulation.getESS());
@@ -78,7 +83,10 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
     	end = System.currentTimeMillis();
     	samplingTime = (end-start)/1000.0;
     	timeInSeconds.add(samplingTime);
-    	System.out.println("Sampling time: " + samplingTime + ", ESS: " + effectiveSampleSize.get(currentIteration));
+    	if (options.verbose) {
+        	System.out.println("Iter " + (currentIteration + 1));
+    		System.out.println("Sampling time: " + samplingTime + ", ESS: " + effectiveSampleSize.get(currentIteration));
+    	}
     	if (processor != null)
     		processor.process(currentIteration, currentPopulation);
     }

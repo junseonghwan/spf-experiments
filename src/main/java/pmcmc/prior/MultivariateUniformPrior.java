@@ -24,12 +24,12 @@ public class MultivariateUniformPrior implements ProbabilityDistribution<RealVec
 			this.maxSupportInclusive[i] = maxSupportInclusive;
 		}
 	}
-	public MultivariateUniformPrior(double [] support, boolean minSupportInclusive, boolean maxSupportInclusive)
+	public MultivariateUniformPrior(double [] support, int dim, boolean minSupportInclusive, boolean maxSupportInclusive)
 	{
-		this.support = new double[support.length][2];
-		this.minSupportInclusive = new boolean[support.length];
-		this.maxSupportInclusive = new boolean[support.length];
-		for (int i = 0; i < support.length; i++) {
+		this.support = new double[dim][2];
+		this.minSupportInclusive = new boolean[dim];
+		this.maxSupportInclusive = new boolean[dim];
+		for (int i = 0; i < dim; i++) {
 			this.support[i] = support;
 			this.maxSupportInclusive[i] = minSupportInclusive;
 			this.maxSupportInclusive[i] = maxSupportInclusive;

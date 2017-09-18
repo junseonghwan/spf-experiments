@@ -20,13 +20,22 @@ public class RickerModel implements Model<RealVectorParameters>
 	private RealVectorParameters old;
 	private Indexer<String> paramIndexer;
 
-	public static String [] paramNames = new String[]{"N0", "phi", "var", "r"};
+	public static String [] paramNames1 = new String[]{"N0", "phi", "var", "r"};
+	public static String [] paramNames2 = new String[]{"phi", "var", "r"};
 	
 	public RickerModel(double N0, double phi, double var, double r)
 	{
 		params = new RealVectorParameters(new double[]{N0, phi, var, r});
 		this.paramIndexer = new Indexer<>();
-		for (String paramName : paramNames)
+		for (String paramName : paramNames1)
+			this.paramIndexer.addToIndex(paramName);
+	}
+
+	public RickerModel(double phi, double var, double r)
+	{
+		params = new RealVectorParameters(new double[]{phi, var, r});
+		this.paramIndexer = new Indexer<>();
+		for (String paramName : paramNames2)
 			this.paramIndexer.addToIndex(paramName);
 	}
 
@@ -42,7 +51,20 @@ public class RickerModel implements Model<RealVectorParameters>
 		
 		return data;
 	}
-	
+
+	public static List<Pair<List<Double>, List<Integer>>> generate(Random random, int numSimulations, int T, int maxN0, double phi, double var, double r)
+	{
+		// generate the latent variable and the data (all at once)
+		List<Pair<List<Double>, List<Integer>>> data = new ArrayList<>();
+		for (int i = 1; i <= numSimulations; i++)
+		{
+			Pair<List<Double>, List<Integer>> ret = RickerModel.simulate(new Random(random.nextLong()), T, random.nextDouble()*maxN0, phi, var, r);
+			data.add(ret);
+		}
+		
+		return data;
+	}
+
 	public static Pair<List<Double>, List<Integer>> readFromFile(String path)
 	{
 		List<Double> Ns = new ArrayList<>();

@@ -1,0 +1,5 @@
+dir<-paste("~/Dropbox/Research/repo/spf-experiments/output/", sep="")
+dmat<-read.csv(paste(dir, "coalescent-sample.csv", sep=""), header=T)
+pdf("~/Dropbox/Research/repo/phd-thesis/contents/phylogenetics/figures/coalescent0.pdf",width=5,height=7,paper='special') 
+plot(hclust(dist(dmat/2)), main="", xlab="", ylab="Height", ann=FALSE)
+dev.off()
