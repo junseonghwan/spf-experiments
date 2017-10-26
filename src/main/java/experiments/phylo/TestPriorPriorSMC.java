@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Random;
 
 import phylo.EvolutionaryModel;
-import phylo.FelsensteinPruningAlgorithm;
+import phylo.FelsensteinPruning;
+//import phylo.FelsensteinPruningSystBiol2012;
+import phylo.LikelihoodCalculatorInterface;
 import phylo.PartialCoalescentState;
 import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
@@ -65,7 +67,7 @@ public class TestPriorPriorSMC implements Runnable
 	public double simulation(Random random, int simulNo)
 	{
 		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(mutationRate);
-		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
+		PhyloOptions.calc = new FelsensteinPruning(model);
 
 		// generate the data and the tree
 		RootedPhylogeny phylogeny = Coalescent.sampleFromCoalescent(random, leaves);
@@ -112,7 +114,7 @@ public class TestPriorPriorSMC implements Runnable
 			heights.add(state.getCoalescent().getHeight());
 
 			// compute the log likelihood
-			FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, state.getCoalescent());
+			LikelihoodCalculatorInterface.computeDataLogLikTable(PhyloOptions.calc, state.getCoalescent());
 			double logLik = PhyloOptions.calc.computeLoglik(state.getCoalescent().getTaxon().getLikelihoodTable());
 			logLiks.add(logLik);
 		}
@@ -130,7 +132,7 @@ public class TestPriorPriorSMC implements Runnable
 
 		// compute the likelihood of the data given the true tree: p(y | t, \theta)
 		System.out.println(phylogeny.getTreeString());
-		FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, phylogeny);
+		LikelihoodCalculatorInterface.computeDataLogLikTable(PhyloOptions.calc, phylogeny);
 		double dataLogLik = PhyloOptions.calc.computeLoglik(phylogeny.getTaxon().getLikelihoodTable());
 		System.out.println("p(y|t)=" + dataLogLik);
 		double logZR = smc.getLogNorms().get(leaves.size() - 2);

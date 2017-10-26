@@ -14,7 +14,8 @@ import briefj.opt.OptionSet;
 import briefj.run.Mains;
 import briefj.run.Results;
 import phylo.EvolutionaryModel;
-import phylo.FelsensteinPruningAlgorithm;
+import phylo.FelsensteinPruningSystBiol2012;
+import phylo.LikelihoodCalculatorInterface;
 import phylo.PartialCoalescentState;
 import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
@@ -65,7 +66,7 @@ public class TestPriorPostSMC implements Runnable {
 
 		// simulate a tree and generate the data
 		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(mutationRate);
-		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
+		PhyloOptions.calc = new FelsensteinPruningSystBiol2012(model);
 
 		// generate the data and the tree
 		RootedPhylogeny phylogeny = Coalescent.sampleFromCoalescent(random, leaves);
@@ -112,7 +113,7 @@ public class TestPriorPostSMC implements Runnable {
 				weights.add(pop.getNormalizedWeight(j));
 
 				// compute the log likelihood
-				FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, particle.getCoalescent());
+				LikelihoodCalculatorInterface.computeDataLogLikTable(PhyloOptions.calc, particle.getCoalescent());
 				double logLik = PhyloOptions.calc.computeLoglik(particle.getCoalescent().getTaxon().getLikelihoodTable());
 				logLiks.add(logLik);
 				
@@ -131,7 +132,7 @@ public class TestPriorPostSMC implements Runnable {
 	
 			// compute the likelihood of the data given the true tree: p(y | t, \theta)
 			System.out.println(phylogeny.getTreeString());
-			FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, phylogeny);
+			LikelihoodCalculatorInterface.computeDataLogLikTable(PhyloOptions.calc, phylogeny);
 
 			// TODO: compute the true log-likelihood via sum-product algorithm
 			double logLik = PhyloOptions.calc.computeLoglik(phylogeny.getTaxon().getLikelihoodTable());
@@ -169,7 +170,7 @@ public class TestPriorPostSMC implements Runnable {
 				heights.add(particle.getCoalescent().getHeight());
 	
 				// compute the log likelihood
-				FelsensteinPruningAlgorithm.computeDataLogLikTable((FelsensteinPruningAlgorithm)PhyloOptions.calc, particle.getCoalescent());
+				LikelihoodCalculatorInterface.computeDataLogLikTable(PhyloOptions.calc, particle.getCoalescent());
 				double logLik = PhyloOptions.calc.computeLoglik(particle.getCoalescent().getTaxon().getLikelihoodTable());
 				logLiks.add(logLik);
 			}

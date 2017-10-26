@@ -7,7 +7,7 @@ import java.util.Random;
 import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.smc.ParticlePopulation;
-import phylo.FelsensteinPruningAlgorithm;
+import phylo.FelsensteinPruningSystBiol2012;
 import phylo.PhyloOptions;
 import simplesmc.AbstractSMCAlgorithm;
 import simplesmc.ParticleProcessor;
@@ -48,7 +48,7 @@ public class StreamingParticleFilter<P> extends AbstractSMCAlgorithm<P>
   public ParticlePopulation<P> sample()
   {
     int nSMCIterations = problemSpec.nIterations();
-    System.out.println("params: " + ((FelsensteinPruningAlgorithm)PhyloOptions.calc).getModel().getModelParameters().asCommaSeparatedLine());
+    System.out.println("params: " + ((FelsensteinPruningSystBiol2012)PhyloOptions.calc).getModel().getModelParameters().asCommaSeparatedLine());
 
     // instantiate new arraylist each time
     nImplicitParticles = new ArrayList<>(nSMCIterations);

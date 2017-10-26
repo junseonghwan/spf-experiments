@@ -80,7 +80,7 @@ public class TestLikelihood
 		}
 
 		// construct likelihood table for the parent node and compare against the hand computation
-		FelsensteinPruningAlgorithm peeling = new FelsensteinPruningAlgorithm(jcModel);
+		FelsensteinPruningSystBiol2012 peeling = new FelsensteinPruningSystBiol2012(jcModel);
 		RootedPhylogeny t1 = new RootedPhylogeny(taxon1);
 		RootedPhylogeny t2 = new RootedPhylogeny(taxon2);
 		double [][] likTable = peeling.computeLikelihoodTable(t1, t2, b1, b2, false).getRight();

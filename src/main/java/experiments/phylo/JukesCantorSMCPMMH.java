@@ -9,7 +9,7 @@ import briefj.opt.Option;
 import briefj.opt.OptionSet;
 import briefj.run.Mains;
 import phylo.EvolutionaryModel;
-import phylo.FelsensteinPruningAlgorithm;
+import phylo.FelsensteinPruningSystBiol2012;
 import phylo.PartialCoalescentState;
 import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
@@ -59,7 +59,7 @@ public class JukesCantorSMCPMMH implements Runnable {
 
 		// instantiate the model to generate the data and the tree
 		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(trueMutationRate);
-		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
+		PhyloOptions.calc = new FelsensteinPruningSystBiol2012(model);
 		RootedPhylogeny phylogeny = Coalescent.sampleFromCoalescent(rand, leaves);
 		GenerateSequences.generateSequencesFromModel(rand, model, phylogeny, numSites);
 	}
@@ -70,7 +70,7 @@ public class JukesCantorSMCPMMH implements Runnable {
 		generateData();
 
 		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(rand.nextDouble()*5);
-		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
+		PhyloOptions.calc = new FelsensteinPruningSystBiol2012(model);
 
 		// specify SMC algorithm
 		smcOptions.random = new Random(rand.nextLong());

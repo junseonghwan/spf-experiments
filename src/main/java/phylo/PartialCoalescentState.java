@@ -99,7 +99,7 @@ public class PartialCoalescentState {
 		newState.trees.remove(t1);
   		newState.trees.remove(t2);
   		newState.trees.add(parent);
-
+  		
   		Pair<Double, double [][]> likelihoodTable = PhyloOptions.calc.computeLikelihoodTable(t1, t2, b1, b2, peek);
 		if (!peek)
 			parent.getTaxon().setLikelihoodTable(likelihoodTable.getRight());

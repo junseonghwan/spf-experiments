@@ -32,7 +32,7 @@ public class Test1 {
 		  }
 		  double mutationRate = 1.0;
 		  JukesCantorModel jc = new JukesCantorModel(mutationRate);
-		  PhyloOptions.calc = new FelsensteinPruningAlgorithm(jc);
+		  PhyloOptions.calc = new FelsensteinPruningSystBiol2012(jc);
 		
 		  PartialCoalescentState currState = PartialCoalescentState.getInitial(taxa);
 		  //PriorPriorProblemSpecification kernel = new PriorPriorProblemSpecification(taxa);

@@ -6,7 +6,7 @@ import java.util.Random;
 
 import bayonet.smc.ParticlePopulation;
 import phylo.EvolutionaryModel;
-import phylo.FelsensteinPruningAlgorithm;
+import phylo.FelsensteinPruningSystBiol2012;
 import phylo.PartialCoalescentState;
 import phylo.PhyloOptions;
 import phylo.RootedPhylogeny;
@@ -57,7 +57,7 @@ public class JukesCantorSPF implements Runnable {
 		}
 
 		EvolutionaryModel<RealVectorParameters> model = new JukesCantorModel(mutationRate);
-		PhyloOptions.calc = new FelsensteinPruningAlgorithm(model);
+		PhyloOptions.calc = new FelsensteinPruningSystBiol2012(model);
 
 		// generate the data and the tree
 		long seed = rand.nextLong();

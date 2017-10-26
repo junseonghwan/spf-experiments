@@ -9,7 +9,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import bayonet.smc.ParticlePopulation;
 import briefj.BriefParallel;
-import phylo.FelsensteinPruningAlgorithm;
+import phylo.FelsensteinPruningSystBiol2012;
 import phylo.PhyloOptions;
 
 
@@ -49,7 +49,7 @@ public class SMCAlgorithm<P> extends AbstractSMCAlgorithm<P>
    */
   public ParticlePopulation<P> sample()
   {
-    System.out.println("params: " + ((FelsensteinPruningAlgorithm)PhyloOptions.calc).getModel().getModelParameters().asCommaSeparatedLine());
+    //System.out.println("params: " + PhyloOptions.calc.getModel().getModelParameters().asCommaSeparatedLine());
 
     int nSMCIterations = proposal.nIterations();
     
